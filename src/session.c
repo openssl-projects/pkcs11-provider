@@ -470,6 +470,36 @@ err:
     return ret;
 }
 
+static int p11prov_session_prompt_for_oob(struct p11prov_slot *slot)
+{
+    const char *info_string = "Please check your Hardware token for an out of "
+                              "band authentication request";
+    UI *ui = UI_new_method(NULL);
+    int ret;
+
+    P11PROV_debug("Starting internal OOB auth prompt slot=%p", slot);
+
+    if (ui == NULL) {
+        ret = RET_OSSL_ERR;
+        goto err;
+    }
+    ret = UI_dup_info_string(ui, info_string);
+    if (ret <= 0) {
+        ret = RET_OSSL_ERR;
+        goto err;
+    }
+
+    if (UI_process(ui)) {
+        ret = RET_OSSL_ERR;
+        goto err;
+    }
+
+    ret = RET_OSSL_OK;
+err:
+    UI_free(ui);
+    return ret;
+}
+
 static CK_RV check_pin_flags_ok(P11PROV_CTX *ctx, CK_SLOT_ID slotid)
 {
     CK_TOKEN_INFO token;
@@ -588,6 +618,13 @@ static CK_RV token_login(P11PROV_SESSION *session, P11PROV_URI *uri,
     }
 
     P11PROV_debug("Attempt Login on session %lu", session->session);
+    if (token->flags & CKF_PROTECTED_AUTHENTICATION_PATH) {
+        int uiret = p11prov_session_prompt_for_oob(slot);
+        if (uiret != RET_OSSL_OK) {
+            P11PROV_debug("Failed to prompt for out of band authentication");
+        }
+    }
+
     /* Supports only USER login sessions for now */
     ret = p11prov_Login(session->provctx, session->session, user_type, pin,
                         pinlen);
