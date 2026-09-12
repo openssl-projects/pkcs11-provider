@@ -623,6 +623,16 @@ static CK_RV p11prov_cipher_session_init(struct p11prov_cipher_ctx *cctx)
     return rv;
 }
 
+static CK_KEY_TYPE p11prov_cipher_key_type(CK_MECHANISM_TYPE mechanism)
+{
+    switch (mechanism) {
+    case CKM_CHACHA20_POLY1305:
+        return CKK_CHACHA20;
+    default:
+        return CKK_AES;
+    }
+}
+
 static int p11prov_cipher_legacy_init(void *ctx, CK_FLAGS op,
                                       const unsigned char *key, size_t keylen,
                                       const unsigned char *iv, size_t ivlen,
@@ -638,10 +648,13 @@ static int p11prov_cipher_legacy_init(void *ctx, CK_FLAGS op,
     }
 
     if (key != NULL && keylen > 0) {
-        /* The only way to fulfill this request is by importing the AES key
-         * in the token as a session object */
-        skey =
-            p11prov_obj_import_secret_key(cctx->provctx, CKK_AES, key, keylen);
+        /* The only way to fulfill this request is by importing the key
+         * in the token as a session object, tagged with the key type this
+         * mechanism actually needs (not always AES, e.g. ChaCha20) */
+        CK_KEY_TYPE keytype =
+            p11prov_cipher_key_type(cctx->mech.mechanism);
+        skey = p11prov_obj_import_secret_key(cctx->provctx, keytype, key,
+                                             keylen);
         if (!skey) {
             return RET_OSSL_ERR;
         }

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
@@ -15,6 +16,17 @@
 #if defined(OSSL_FUNC_CIPHER_ENCRYPT_SKEY_INIT)
 
 #define MAX_DATA_LEN 1024
+
+/* EVP_SKEY_import_raw_key() takes a generic "key type" name, not the
+ * specific AEAD algorithm name -- it identifies the skeymgmt used to
+ * import the raw bytes, not the cipher they will be used with. */
+static const char *skey_type_for_algorithm(const char *algorithm)
+{
+    if (strncmp(algorithm, "ChaCha20", 8) == 0) {
+        return "CHACHA20";
+    }
+    return "AES";
+}
 
 static int aead_encrypt_data(const char *algorithm, const char *propq,
                              bool skey, const uint8_t *key, size_t keylen,
@@ -55,8 +67,9 @@ static int aead_encrypt_data(const char *algorithm, const char *propq,
             goto end;
         }
 
-        skey_obj = EVP_SKEY_import_raw_key(NULL, "AES", (unsigned char *)key,
-                                           actualkeylen, propq);
+        skey_obj = EVP_SKEY_import_raw_key(
+            NULL, skey_type_for_algorithm(algorithm), (unsigned char *)key,
+            actualkeylen, propq);
         if (!skey_obj) {
             fprintf(stderr, "EVP_SKEY_import_raw_key failed!\n");
             goto end;
@@ -146,8 +159,9 @@ static int aead_decrypt_data(const char *algorithm, const char *propq,
             goto end;
         }
 
-        skey_obj = EVP_SKEY_import_raw_key(NULL, "AES", (unsigned char *)key,
-                                           actualkeylen, propq);
+        skey_obj = EVP_SKEY_import_raw_key(
+            NULL, skey_type_for_algorithm(algorithm), (unsigned char *)key,
+            actualkeylen, propq);
         if (!skey_obj) {
             fprintf(stderr, "EVP_SKEY_import_raw_key failed!\n");
             goto end;
