@@ -67,9 +67,9 @@ static int aead_encrypt_data(const char *algorithm, const char *propq,
             goto end;
         }
 
-        skey_obj = EVP_SKEY_import_raw_key(
-            NULL, skey_type_for_algorithm(algorithm), (unsigned char *)key,
-            actualkeylen, propq);
+        skey_obj =
+            EVP_SKEY_import_raw_key(NULL, skey_type_for_algorithm(algorithm),
+                                    (unsigned char *)key, actualkeylen, propq);
         if (!skey_obj) {
             fprintf(stderr, "EVP_SKEY_import_raw_key failed!\n");
             goto end;
@@ -159,9 +159,9 @@ static int aead_decrypt_data(const char *algorithm, const char *propq,
             goto end;
         }
 
-        skey_obj = EVP_SKEY_import_raw_key(
-            NULL, skey_type_for_algorithm(algorithm), (unsigned char *)key,
-            actualkeylen, propq);
+        skey_obj =
+            EVP_SKEY_import_raw_key(NULL, skey_type_for_algorithm(algorithm),
+                                    (unsigned char *)key, actualkeylen, propq);
         if (!skey_obj) {
             fprintf(stderr, "EVP_SKEY_import_raw_key failed!\n");
             goto end;
