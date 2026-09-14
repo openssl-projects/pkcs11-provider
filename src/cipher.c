@@ -651,10 +651,9 @@ static int p11prov_cipher_legacy_init(void *ctx, CK_FLAGS op,
         /* The only way to fulfill this request is by importing the key
          * in the token as a session object, tagged with the key type this
          * mechanism actually needs (not always AES, e.g. ChaCha20) */
-        CK_KEY_TYPE keytype =
-            p11prov_cipher_key_type(cctx->mech.mechanism);
-        skey = p11prov_obj_import_secret_key(cctx->provctx, keytype, key,
-                                             keylen);
+        CK_KEY_TYPE keytype = p11prov_cipher_key_type(cctx->mech.mechanism);
+        skey =
+            p11prov_obj_import_secret_key(cctx->provctx, keytype, key, keylen);
         if (!skey) {
             return RET_OSSL_ERR;
         }

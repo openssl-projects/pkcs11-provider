@@ -957,8 +957,8 @@ CK_RV p11prov_register_skmgmt(P11PROV_CTX *ctx, bool fips_property)
 
     p11prov_assign_alg(&algs[i++], skmgmt_algorithms, P11PROV_SKMGMT_AES,
                        property);
-    p11prov_assign_alg(&algs[i++], skmgmt_algorithms,
-                       P11PROV_SKMGMT_CHACHA20, property);
+    p11prov_assign_alg(&algs[i++], skmgmt_algorithms, P11PROV_SKMGMT_CHACHA20,
+                       property);
     p11prov_assign_alg(&algs[i++], skmgmt_algorithms,
                        P11PROV_SKMGMT_GENERIC_SECRET, property);
 
