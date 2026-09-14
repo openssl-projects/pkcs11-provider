@@ -28,7 +28,6 @@ DISPATCH_SKEYMGMT_FN(chacha20, import);
 DISPATCH_SKEYMGMT_FN(chacha20, generate);
 
 DISPATCH_SKEYMGMT_FN(generic_secret, import);
-DISPATCH_SKEYMGMT_FN(generic_secret, export);
 DISPATCH_SKEYMGMT_FN(generic_secret, generate);
 
 static void p11prov_common_free(void *key)
@@ -42,17 +41,6 @@ static const char *p11prov_common_get_key_id(void *keydata)
     P11PROV_OBJ *key = (P11PROV_OBJ *)keydata;
 
     return p11prov_obj_get_public_uri(key);
-}
-
-static int p11prov_common_export(void *keydata, int selection,
-                                 OSSL_CALLBACK *param_cb, void *cbarg)
-{
-    P11PROV_OBJ *key = (P11PROV_OBJ *)keydata;
-
-    P11PROV_raise(p11prov_obj_get_prov_ctx(key), CKR_KEY_FUNCTION_NOT_PERMITTED,
-                  "Not exportable");
-
-    return RET_OSSL_ERR;
 }
 
 static const OSSL_PARAM common_import_params[] = {
@@ -184,6 +172,126 @@ static int p11prov_cipher_usage_to_flags(const char *usage, CK_FLAGS *flags)
     }
 
     return CKR_OK;
+}
+
+static int p11prov_common_export(void *keydata, int selection,
+                                 OSSL_CALLBACK *param_cb, void *cbarg)
+{
+    P11PROV_OBJ *key = (P11PROV_OBJ *)keydata;
+    P11PROV_CTX *ctx = p11prov_obj_get_prov_ctx(key);
+    CK_ATTRIBUTE *cached_value_attr;
+    CK_ATTRIBUTE *extractable_attr;
+    CK_ATTRIBUTE *sensitive_attr;
+    CK_BBOOL extractable = CK_FALSE;
+    CK_BBOOL sensitive = CK_TRUE;
+
+    if (!key) {
+        return RET_OSSL_ERR;
+    }
+
+    cached_value_attr = p11prov_obj_get_attr(key, CKA_VALUE);
+    if (cached_value_attr) {
+        OSSL_PARAM params[2];
+
+        params[0] = OSSL_PARAM_construct_octet_string(
+            OSSL_SKEY_PARAM_RAW_BYTES, cached_value_attr->pValue,
+            cached_value_attr->ulValueLen);
+        params[1] = OSSL_PARAM_construct_end();
+
+        if (param_cb(params, cbarg)) {
+            return RET_OSSL_OK;
+        }
+        return RET_OSSL_ERR;
+    }
+
+    extractable_attr = p11prov_obj_get_attr(key, CKA_EXTRACTABLE);
+    if (extractable_attr && extractable_attr->ulValueLen == sizeof(CK_BBOOL)) {
+        extractable = *(CK_BBOOL *)extractable_attr->pValue;
+    }
+
+    sensitive_attr = p11prov_obj_get_attr(key, CKA_SENSITIVE);
+    if (sensitive_attr && sensitive_attr->ulValueLen == sizeof(CK_BBOOL)) {
+        sensitive = *(CK_BBOOL *)sensitive_attr->pValue;
+    }
+
+    if (extractable == CK_TRUE && sensitive == CK_FALSE) {
+        P11PROV_SESSION *session = NULL;
+        CK_ATTRIBUTE value_attr = { CKA_VALUE, NULL_PTR, 0 };
+        OSSL_PARAM params[2];
+        CK_RV rv;
+        int ret = RET_OSSL_ERR;
+        CK_ULONG key_size;
+
+        rv = p11prov_try_session_ref(key, CK_UNAVAILABLE_INFORMATION, false,
+                                     false, &session);
+        if (rv != CKR_OK) {
+            P11PROV_raise(ctx, rv, "Failed to get session for export");
+            return RET_OSSL_ERR;
+        }
+
+        key_size = p11prov_obj_get_key_size(key);
+        if (key_size > 0 && key_size != CK_UNAVAILABLE_INFORMATION) {
+            value_attr.ulValueLen = key_size;
+        } else {
+            /* Get length of CKA_VALUE */
+            rv = p11prov_GetAttributeValue(ctx, p11prov_session_handle(session),
+                                           p11prov_obj_get_handle(key),
+                                           &value_attr, 1);
+            if (rv != CKR_OK
+                || value_attr.ulValueLen == CK_UNAVAILABLE_INFORMATION) {
+                P11PROV_raise(ctx, rv, "Failed to get key value length");
+                goto done;
+            }
+        }
+
+        value_attr.pValue = OPENSSL_malloc(value_attr.ulValueLen);
+        if (value_attr.pValue == NULL && value_attr.ulValueLen > 0) {
+            P11PROV_raise(ctx, CKR_HOST_MEMORY,
+                          "Failed to allocate for key value");
+            goto done;
+        }
+
+        /* Get CKA_VALUE */
+        rv = p11prov_GetAttributeValue(ctx, p11prov_session_handle(session),
+                                       p11prov_obj_get_handle(key), &value_attr,
+                                       1);
+        if (rv != CKR_OK) {
+            P11PROV_raise(ctx, rv, "Failed to get key value");
+            OPENSSL_clear_free(value_attr.pValue, value_attr.ulValueLen);
+            goto done;
+        }
+
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_SKEY_PARAM_RAW_BYTES,
+                                                      value_attr.pValue,
+                                                      value_attr.ulValueLen);
+        params[1] = OSSL_PARAM_construct_end();
+
+        if (param_cb(params, cbarg)) {
+            ret = RET_OSSL_OK;
+        }
+
+        /* Note: we MUST cache the attribute here, because the callback
+         * OpenSSL use expect the value to valid for the life of the key
+         * object and will just store the provided pointer. Therefore we
+         * need * to keep value_attr.pValue alive as it will be used after
+         * this * function returns. This mechanism works also as cache to
+         * avoid * re-fecthing from the token multiple times. As multiple
+         * import/export * cycles may happen when a mix of legacy and
+         * SKEY functions are used.
+         */
+        rv = p11prov_obj_add_attr(key, &value_attr);
+        if (rv != CKR_OK) {
+            /* Failed to cache, free the memory to avoid a leak */
+            OPENSSL_clear_free(value_attr.pValue, value_attr.ulValueLen);
+            ret = RET_OSSL_ERR;
+        }
+
+    done:
+        p11prov_return_session(session);
+        return ret;
+    }
+
+    return RET_OSSL_ERR;
 }
 
 static void *p11prov_common_generate(void *provctx, CK_MECHANISM_TYPE mech_type,
@@ -408,125 +516,6 @@ static void *p11prov_generic_secret_generate(void *provctx,
                                    CKF_DERIVE, params);
 }
 
-static int p11prov_generic_secret_export(void *keydata, int selection,
-                                         OSSL_CALLBACK *param_cb, void *cbarg)
-{
-    P11PROV_OBJ *key = (P11PROV_OBJ *)keydata;
-    P11PROV_CTX *ctx = p11prov_obj_get_prov_ctx(key);
-    CK_ATTRIBUTE *cached_value_attr;
-    CK_ATTRIBUTE *extractable_attr;
-    CK_ATTRIBUTE *sensitive_attr;
-    CK_BBOOL extractable = CK_FALSE;
-    CK_BBOOL sensitive = CK_TRUE;
-
-    cached_value_attr = p11prov_obj_get_attr(key, CKA_VALUE);
-    if (cached_value_attr) {
-        OSSL_PARAM params[2];
-
-        params[0] = OSSL_PARAM_construct_octet_string(
-            OSSL_SKEY_PARAM_RAW_BYTES, cached_value_attr->pValue,
-            cached_value_attr->ulValueLen);
-        params[1] = OSSL_PARAM_construct_end();
-
-        if (param_cb(params, cbarg)) {
-            return RET_OSSL_OK;
-        }
-        return RET_OSSL_ERR;
-    }
-
-    extractable_attr = p11prov_obj_get_attr(key, CKA_EXTRACTABLE);
-    if (extractable_attr && extractable_attr->ulValueLen == sizeof(CK_BBOOL)) {
-        extractable = *(CK_BBOOL *)extractable_attr->pValue;
-    }
-
-    sensitive_attr = p11prov_obj_get_attr(key, CKA_SENSITIVE);
-    if (sensitive_attr && sensitive_attr->ulValueLen == sizeof(CK_BBOOL)) {
-        sensitive = *(CK_BBOOL *)sensitive_attr->pValue;
-    }
-
-    if (extractable == CK_TRUE && sensitive == CK_FALSE) {
-        P11PROV_SESSION *session = NULL;
-        CK_ATTRIBUTE value_attr = { CKA_VALUE, NULL_PTR, 0 };
-        OSSL_PARAM params[2];
-        CK_RV rv;
-        int ret = RET_OSSL_ERR;
-        CK_ULONG key_size;
-
-        rv = p11prov_try_session_ref(key, CK_UNAVAILABLE_INFORMATION, false,
-                                     false, &session);
-        if (rv != CKR_OK) {
-            P11PROV_raise(ctx, rv, "Failed to get session for export");
-            return RET_OSSL_ERR;
-        }
-
-        key_size = p11prov_obj_get_key_size(key);
-        if (key_size > 0 && key_size != CK_UNAVAILABLE_INFORMATION) {
-            value_attr.ulValueLen = key_size;
-        } else {
-            /* Get length of CKA_VALUE */
-            rv = p11prov_GetAttributeValue(ctx, p11prov_session_handle(session),
-                                           p11prov_obj_get_handle(key),
-                                           &value_attr, 1);
-            if (rv != CKR_OK
-                || value_attr.ulValueLen == CK_UNAVAILABLE_INFORMATION) {
-                P11PROV_raise(ctx, rv, "Failed to get key value length");
-                goto done;
-            }
-        }
-
-        value_attr.pValue = OPENSSL_malloc(value_attr.ulValueLen);
-        if (value_attr.pValue == NULL && value_attr.ulValueLen > 0) {
-            P11PROV_raise(ctx, CKR_HOST_MEMORY,
-                          "Failed to allocate for key value");
-            goto done;
-        }
-
-        /* Get CKA_VALUE */
-        rv = p11prov_GetAttributeValue(ctx, p11prov_session_handle(session),
-                                       p11prov_obj_get_handle(key), &value_attr,
-                                       1);
-        if (rv != CKR_OK) {
-            P11PROV_raise(ctx, rv, "Failed to get key value");
-            OPENSSL_clear_free(value_attr.pValue, value_attr.ulValueLen);
-            goto done;
-        }
-
-        params[0] = OSSL_PARAM_construct_octet_string(OSSL_SKEY_PARAM_RAW_BYTES,
-                                                      value_attr.pValue,
-                                                      value_attr.ulValueLen);
-        params[1] = OSSL_PARAM_construct_end();
-
-        if (param_cb(params, cbarg)) {
-            ret = RET_OSSL_OK;
-        }
-
-        /* Note: we MUST cache the attribute here, because the callback
-         * OpenSSL use expect the value to valid for the life of the key
-         * object and will just store the provided pointer. Therefore we
-         * need * to keep value_attr.pValue alive as it will be used after
-         * this * function returns. This mechanism works also as cache to
-         * avoid * re-fecthing from the token multiple times. As multiple
-         * import/export * cycles may happen when a mix of legacy and
-         * SKEY functions are used.
-         */
-        rv = p11prov_obj_add_attr(key, &value_attr);
-        if (rv != CKR_OK) {
-            /* Failed to cache, free the memory to avoid a leak */
-            OPENSSL_clear_free(value_attr.pValue, value_attr.ulValueLen);
-            ret = RET_OSSL_ERR;
-        }
-
-    done:
-        p11prov_return_session(session);
-        return ret;
-    }
-
-    P11PROV_raise(p11prov_obj_get_prov_ctx(key), CKR_KEY_FUNCTION_NOT_PERMITTED,
-                  "Not exportable");
-
-    return RET_OSSL_ERR;
-}
-
 const OSSL_DISPATCH p11prov_aes_functions[] = {
     DISPATCH_SKEYMGMT_ELEM(common, FREE, free),
     DISPATCH_SKEYMGMT_ELEM(aes, IMPORT, import),
@@ -552,7 +541,7 @@ const OSSL_DISPATCH p11prov_chacha20_functions[] = {
 const OSSL_DISPATCH p11prov_generic_secret_functions[] = {
     DISPATCH_SKEYMGMT_ELEM(common, FREE, free),
     DISPATCH_SKEYMGMT_ELEM(generic_secret, IMPORT, import),
-    DISPATCH_SKEYMGMT_ELEM(generic_secret, EXPORT, export),
+    DISPATCH_SKEYMGMT_ELEM(common, EXPORT, export),
     DISPATCH_SKEYMGMT_ELEM(generic_secret, GENERATE, generate),
     DISPATCH_SKEYMGMT_ELEM(common, GET_KEY_ID, get_key_id),
     DISPATCH_SKEYMGMT_ELEM(common, IMP_SETTABLE_PARAMS, imp_settable_params),
