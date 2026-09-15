@@ -20,7 +20,14 @@ CK_RV p11prov_get_session(P11PROV_CTX *provctx, CK_SLOT_ID *slotid,
 CK_RV p11prov_try_session_ref(P11PROV_OBJ *obj, CK_MECHANISM_TYPE mechtype,
                               bool reqlogin, bool rw,
                               P11PROV_SESSION **_session);
+/* How a login session is obtained */
+enum p11prov_login_request {
+    LOGIN_REQUIRED, /* wait for a busy login session and log in */
+    LOGIN_NOT_REQUIRED, /* log in if possible but do not wait */
+    LOGIN_ONLY_CACHED, /* use an existing login session, never log in */
+};
 CK_RV p11prov_take_login_session(P11PROV_CTX *provctx, CK_SLOT_ID slotid,
+                                 enum p11prov_login_request login,
                                  P11PROV_SESSION **_session);
 void p11prov_return_session(P11PROV_SESSION *session);
 void p11prov_session_ref(P11PROV_SESSION *session);
