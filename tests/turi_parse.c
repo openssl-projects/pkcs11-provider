@@ -47,6 +47,14 @@ int main(void)
         "pkcs11:token={foo}",
         "pkcs11:token=foo|bar",
         "pkcs11:unknown<attr>=foo",
+        /* Duplicate attributes */
+        "pkcs11:token=foo;token=bar",
+        "pkcs11:model=A;model=B",
+        "pkcs11:slot-id=1;slot-id=2",
+        "pkcs11:pin-value=1234;pin-value=5678",
+        "pkcs11:pin-value=1234;pin-source=file:pin",
+        "pkcs11:type=cert;object-type=cert",
+        "pkcs11:id=%01;id=%02",
         NULL,
     };
 

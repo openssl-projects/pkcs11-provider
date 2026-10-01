@@ -122,7 +122,10 @@ static P11PROV_URI *construct_search_uri(struct p11prov_store_ctx *ctx)
             class = CKO_CERTIFICATE;
         }
     }
-    p11prov_uri_set_class(search_uri, class);
+    rv = p11prov_uri_set_class(search_uri, class);
+    if (rv != CKR_OK) {
+        goto done;
+    }
 
     /* check if we can refine the search label if it is not
      * already defined in the URI */

@@ -3,6 +3,7 @@
 
 #include "provider.h"
 #include <ctype.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -136,7 +137,7 @@ struct p11prov_uri {
     /* CK_INFO attributes */
     char *library_description;
     char *library_manufacturer;
-    CK_VERSION library_version;
+    CK_VERSION *library_version;
     /* CK_TOKEN_INFO attributes */
     char *token;
     char *manufacturer;
@@ -144,12 +145,12 @@ struct p11prov_uri {
     char *serial;
     /* CK_SLOT_INFO attributes */
     char *slot_description;
-    CK_SLOT_ID slot_id;
+    CK_SLOT_ID *slot_id;
     char *slot_manufacturer;
     /* object attributes */
     CK_ATTRIBUTE id;
     CK_ATTRIBUTE object;
-    CK_OBJECT_CLASS type;
+    CK_OBJECT_CLASS *type;
     /* pin */
     char *pin;
 };
@@ -414,14 +415,17 @@ static void p11prov_uri_free_int(P11PROV_URI *uri)
 {
     OPENSSL_free(uri->library_manufacturer);
     OPENSSL_free(uri->library_description);
+    OPENSSL_free(uri->library_version);
     OPENSSL_free(uri->token);
     OPENSSL_free(uri->manufacturer);
     OPENSSL_free(uri->model);
     OPENSSL_free(uri->serial);
     OPENSSL_free(uri->slot_description);
+    OPENSSL_free(uri->slot_id);
     OPENSSL_free(uri->slot_manufacturer);
     OPENSSL_free(uri->id.pValue);
     OPENSSL_free(uri->object.pValue);
+    OPENSSL_free(uri->type);
     if (uri->pin) {
         OPENSSL_clear_free(uri->pin, strlen(uri->pin));
     }
@@ -452,50 +456,59 @@ static int parse_utf8str(P11PROV_CTX *ctx, const char *str, size_t len,
     return 0;
 }
 
-static int parse_ck_attribute(P11PROV_CTX *ctx, const char *str, size_t len,
-                              void **output)
+static int parse_id(P11PROV_CTX *ctx, const char *str, size_t len,
+                    void **output)
 {
-    CK_ATTRIBUTE *cka = (CK_ATTRIBUTE *)output;
+    CK_ATTRIBUTE *cka =
+        (CK_ATTRIBUTE *)((char *)output - offsetof(CK_ATTRIBUTE, pValue));
     CK_UTF8CHAR *outstr;
     size_t outlen;
     int ret;
 
-    switch (cka->type) {
-    case CKA_LABEL:
-        ret = parse_utf8str(ctx, str, len, (void **)&outstr);
-        if (ret != 0) {
-            return ret;
-        }
-        cka->pValue = outstr;
-        cka->ulValueLen = strlen((const char *)outstr);
-        break;
-    case CKA_ID:
-        ret = parse_attr(str, len, &outstr, &outlen);
-        if (ret != 0) {
-            P11PROV_raise(ctx, CKR_ARGUMENTS_BAD,
-                          "Failed to parse CKA_ID: [%.*s]", (int)len, str);
-            return ret;
-        }
-        cka->pValue = outstr;
-        cka->ulValueLen = outlen;
-        break;
-    default:
-        return EINVAL;
+    ret = parse_attr(str, len, &outstr, &outlen);
+    if (ret != 0) {
+        P11PROV_raise(ctx, CKR_ARGUMENTS_BAD, "Failed to parse CKA_ID: [%.*s]",
+                      (int)len, str);
+        return ret;
     }
+    *output = outstr;
+    cka->ulValueLen = outlen;
+    return 0;
+}
 
+static int parse_object(P11PROV_CTX *ctx, const char *str, size_t len,
+                        void **output)
+{
+    CK_ATTRIBUTE *cka =
+        (CK_ATTRIBUTE *)((char *)output - offsetof(CK_ATTRIBUTE, pValue));
+    CK_UTF8CHAR *outstr;
+    int ret;
+
+    ret = parse_utf8str(ctx, str, len, (void **)&outstr);
+    if (ret != 0) {
+        return ret;
+    }
+    *output = outstr;
+    cka->ulValueLen = strlen((const char *)outstr);
     return 0;
 }
 
 static int parse_class(P11PROV_CTX *ctx, const char *str, size_t len,
                        void **output)
 {
-    CK_OBJECT_CLASS *class = (CK_OBJECT_CLASS *)output;
-    char *typestr;
+    CK_OBJECT_CLASS *class;
+    char *typestr = NULL;
     int ret;
 
     ret = parse_utf8str(ctx, str, len, (void **)&typestr);
     if (ret != 0) {
         return ret;
+    }
+
+    class = OPENSSL_malloc(sizeof(CK_OBJECT_CLASS));
+    if (!class) {
+        OPENSSL_free(typestr);
+        return ENOMEM;
     }
 
     if (strcmp(typestr, TYPE_data) == 0) {
@@ -514,6 +527,11 @@ static int parse_class(P11PROV_CTX *ctx, const char *str, size_t len,
         ret = EINVAL;
     }
 
+    if (ret == 0) {
+        *output = class;
+    } else {
+        OPENSSL_free(class);
+    }
     OPENSSL_free(typestr);
     return ret;
 }
@@ -521,7 +539,7 @@ static int parse_class(P11PROV_CTX *ctx, const char *str, size_t len,
 static int parse_version(P11PROV_CTX *ctx, const char *str, size_t len,
                          void **output)
 {
-    CK_VERSION *ver = (CK_VERSION *)output;
+    CK_VERSION *ver = NULL;
     const char *sep;
     CK_ULONG val;
     size_t major_len;
@@ -530,6 +548,11 @@ static int parse_version(P11PROV_CTX *ctx, const char *str, size_t len,
     if (len < 1 || len > 7) {
         ret = EINVAL;
         goto done;
+    }
+
+    ver = OPENSSL_zalloc(sizeof(CK_VERSION));
+    if (!ver) {
+        return ENOMEM;
     }
 
     sep = memchr(str, '.', len);
@@ -561,9 +584,12 @@ static int parse_version(P11PROV_CTX *ctx, const char *str, size_t len,
         ver->minor = 0;
     }
 
+    *output = ver;
+    ver = NULL;
     ret = 0;
 
 done:
+    OPENSSL_free(ver);
     if (ret != 0) {
         P11PROV_raise(ctx, CKR_ARGUMENTS_BAD, "Value not a version [%.*s]",
                       (int)len, str);
@@ -610,6 +636,28 @@ done:
     return ret;
 }
 
+static int parse_ulong_alloc(P11PROV_CTX *ctx, const char *str, size_t len,
+                             void **output)
+{
+    CK_ULONG val;
+    CK_ULONG *alloc_val;
+    int ret;
+
+    ret = parse_ulong(ctx, str, len, (void **)&val);
+    if (ret != 0) {
+        return ret;
+    }
+
+    alloc_val = OPENSSL_malloc(sizeof(CK_ULONG));
+    if (!alloc_val) {
+        return ENOMEM;
+    }
+
+    *alloc_val = val;
+    *output = alloc_val;
+    return 0;
+}
+
 #define DECL_ATTR_COMP(u_attr, handler) \
     { \
         ATTR_##u_attr, sizeof(ATTR_##u_attr) - 1, handler, (void **)&u.u_attr \
@@ -625,8 +673,6 @@ struct uri_components {
 P11PROV_URI *p11prov_parse_uri(P11PROV_CTX *ctx, const char *uri)
 {
     struct p11prov_uri u = {
-        .type = CK_UNAVAILABLE_INFORMATION,
-        .slot_id = CK_UNAVAILABLE_INFORMATION,
         .id = { .type = CKA_ID },
         .object = { .type = CKA_LABEL },
     };
@@ -639,10 +685,11 @@ P11PROV_URI *p11prov_parse_uri(P11PROV_CTX *ctx, const char *uri)
         DECL_ATTR_COMP(model, parse_utf8str),
         DECL_ATTR_COMP(serial, parse_utf8str),
         DECL_ATTR_COMP(slot_description, parse_utf8str),
-        DECL_ATTR_COMP(slot_id, parse_ulong),
+        DECL_ATTR_COMP(slot_id, parse_ulong_alloc),
         DECL_ATTR_COMP(slot_manufacturer, parse_utf8str),
-        DECL_ATTR_COMP(id, parse_ck_attribute),
-        DECL_ATTR_COMP(object, parse_ck_attribute),
+        { "id", sizeof("id") - 1, parse_id, (void **)&u.id.pValue },
+        { "object", sizeof("object") - 1, parse_object,
+          (void **)&u.object.pValue },
         DECL_ATTR_COMP(type, parse_class),
         { "pin-value", sizeof("pin-value") - 1, parse_utf8str,
           (void **)&u.pin },
@@ -681,6 +728,14 @@ P11PROV_URI *p11prov_parse_uri(P11PROV_CTX *ctx, const char *uri)
         for (int i = 0; ucmap[i].attr != NULL; i++) {
             if (strncmp(p, ucmap[i].attr, ucmap[i].attrlen) == 0
                 && p[ucmap[i].attrlen] == '=') {
+                if (*ucmap[i].output != NULL) {
+                    P11PROV_raise(ctx, CKR_ARGUMENTS_BAD,
+                                  "Duplicate attribute [%.*s] in URI",
+                                  (int)ucmap[i].attrlen, ucmap[i].attr);
+                    ret = EINVAL;
+                    goto done;
+                }
+
                 p += ucmap[i].attrlen + 1;
                 len -= ucmap[i].attrlen + 1;
                 ret = ucmap[i].handler(ctx, p, len, ucmap[i].output);
@@ -705,11 +760,10 @@ done:
         mu = OPENSSL_malloc(sizeof(struct p11prov_uri));
         if (mu) {
             *mu = u;
-        } else {
-            p11prov_uri_free_int(&u);
+            return mu;
         }
-        return mu;
     }
+    p11prov_uri_free_int(&u);
     return NULL;
 }
 
@@ -904,12 +958,24 @@ void p11prov_uri_free(P11PROV_URI *uri)
 
 CK_OBJECT_CLASS p11prov_uri_get_class(P11PROV_URI *uri)
 {
-    return uri->type;
+    return uri->type ? *uri->type : CK_UNAVAILABLE_INFORMATION;
 }
 
-void p11prov_uri_set_class(P11PROV_URI *uri, CK_OBJECT_CLASS class)
+CK_RV p11prov_uri_set_class(P11PROV_URI *uri, CK_OBJECT_CLASS class)
 {
-    uri->type = class;
+    if (class == CK_UNAVAILABLE_INFORMATION) {
+        OPENSSL_free(uri->type);
+        uri->type = NULL;
+        return CKR_OK;
+    }
+    if (uri->type == NULL) {
+        uri->type = OPENSSL_malloc(sizeof(CK_OBJECT_CLASS));
+        if (uri->type == NULL) {
+            return CKR_HOST_MEMORY;
+        }
+    }
+    *uri->type = class;
+    return CKR_OK;
 }
 
 CK_ATTRIBUTE p11prov_uri_get_id(P11PROV_URI *uri)
@@ -946,12 +1012,24 @@ char *p11prov_uri_get_pin(P11PROV_URI *uri)
 
 CK_SLOT_ID p11prov_uri_get_slot_id(P11PROV_URI *uri)
 {
-    return uri->slot_id;
+    return uri->slot_id ? *uri->slot_id : CK_UNAVAILABLE_INFORMATION;
 }
 
-void p11prov_uri_set_slot_id(P11PROV_URI *uri, CK_SLOT_ID slot_id)
+CK_RV p11prov_uri_set_slot_id(P11PROV_URI *uri, CK_SLOT_ID slot_id)
 {
-    uri->slot_id = slot_id;
+    if (slot_id == CK_UNAVAILABLE_INFORMATION) {
+        OPENSSL_free(uri->slot_id);
+        uri->slot_id = NULL;
+        return CKR_OK;
+    }
+    if (uri->slot_id == NULL) {
+        uri->slot_id = OPENSSL_malloc(sizeof(CK_SLOT_ID));
+        if (uri->slot_id == NULL) {
+            return CKR_HOST_MEMORY;
+        }
+    }
+    *uri->slot_id = slot_id;
+    return CKR_OK;
 }
 
 P11PROV_URI *p11prov_copy_uri(P11PROV_URI *uri)
@@ -974,6 +1052,29 @@ P11PROV_URI *p11prov_copy_uri(P11PROV_URI *uri)
     COPY_STRUCT_MEMBER(cu, uri, slot_manufacturer)
     COPY_STRUCT_MEMBER(cu, uri, pin)
 
+    if (uri->library_version) {
+        cu->library_version =
+            OPENSSL_memdup(uri->library_version, sizeof(CK_VERSION));
+        if (!cu->library_version) {
+            p11prov_uri_free(cu);
+            return NULL;
+        }
+    }
+    if (uri->slot_id) {
+        cu->slot_id = OPENSSL_memdup(uri->slot_id, sizeof(CK_SLOT_ID));
+        if (!cu->slot_id) {
+            p11prov_uri_free(cu);
+            return NULL;
+        }
+    }
+    if (uri->type) {
+        cu->type = OPENSSL_memdup(uri->type, sizeof(CK_OBJECT_CLASS));
+        if (!cu->type) {
+            p11prov_uri_free(cu);
+            return NULL;
+        }
+    }
+
     rv = p11prov_copy_attr(&cu->id, &uri->id);
     if (rv != CKR_OK) {
         p11prov_uri_free(cu);
@@ -986,17 +1087,13 @@ P11PROV_URI *p11prov_copy_uri(P11PROV_URI *uri)
         return NULL;
     }
 
-    cu->library_version = uri->library_version;
-    cu->slot_id = uri->slot_id;
-    cu->type = uri->type;
-
     return cu;
 }
 
 CK_RV p11prov_uri_match_token(P11PROV_URI *uri, CK_SLOT_ID slot_id,
                               CK_SLOT_INFO *slot, CK_TOKEN_INFO *token)
 {
-    if (uri->slot_id != CK_UNAVAILABLE_INFORMATION && uri->slot_id != slot_id) {
+    if (uri->slot_id && *uri->slot_id != slot_id) {
         return CKR_CANCEL;
     }
 
