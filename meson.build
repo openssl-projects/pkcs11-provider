@@ -100,6 +100,13 @@ foreach h : headers
   endif
 endforeach
 
+# dl and pthread are needed for linking on platforms that do not include
+# them in glibc (for example el8). We do have them already when we run
+# the provider library and load that from openssl as openssl has them already
+# linked in, but we need them for linking self-contained binaries.
+dl_dep = cc.find_library('dl', required: false)
+pthread_dep = dependency('threads')
+
 functions = [
   'OSSL_PROVIDER_load_ex',
 ]
@@ -117,4 +124,3 @@ meson.add_dist_script('scripts/clean-dist.sh')
 subdir('src')
 subdir('docs')
 subdir('tests')
-

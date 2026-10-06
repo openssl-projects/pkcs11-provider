@@ -136,14 +136,14 @@ done
 title PARA "Test Symmetric Key Generation"
 if [[ "${SUPPORT_SYMMETRIC}" = "1" ]]; then
     ossl 'skeyutl -genkey -skeymgmt AES -cipher aes128
-                  -skeyopt "pkcs11_uri:pkcs11:id=%55%33\;object=SECRET-SKEY"
+                  -skeyopt "pkcs11_uri:pkcs11:id=%55%33;object=SECRET-SKEY"
                   -skeyopt "pkcs11_ephemeral:0"'
     P11DEFLOGIN=("--login" "--pin=${PINVALUE}")
     ptool -O | grep SECRET-SKEY
 else
     FAIL=0
     ossl 'skeyutl -genkey -skeymgmt AES -cipher aes128
-                  -skeyopt "pkcs11_uri:pkcs11:id=%55%33\;object=SECRET-SKEY"
+                  -skeyopt "pkcs11_uri:pkcs11:id=%55%33;object=SECRET-SKEY"
                   -skeyopt "pkcs11_ephemeral:0"' || FAIL=1
     if [ $FAIL -eq 0 ]; then
         echo "Skeyutil genkey operation should have failed"

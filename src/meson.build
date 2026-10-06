@@ -51,7 +51,7 @@ pkcs11_provider = shared_module(
   'pkcs11',
   pkcs11_provider_sources,
   name_prefix: '',
-  dependencies: [libcrypto],
+  dependencies: [libcrypto, dl_dep, pthread_dep],
   include_directories: [configinc],
   link_depends: [pkcs11_provider_map],
   link_args: pkcs11_provider_ldflags,

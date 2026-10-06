@@ -134,12 +134,24 @@ ec_point_test = executable(
   include_directories: [configinc, include_directories('../src')],
   dependencies: [libcrypto],
 )
+uri_parse_test = executable(
+  'turi_parse',
+  ['turi_parse.c'],
+  objects: pkcs11_provider.extract_all_objects(),
+  include_directories: [configinc, include_directories('../src')],
+  dependencies: [libcrypto, dl_dep, pthread_dep],
+)
 
 setup_script=find_program('setup.sh')
 all_suites=['softokn', 'softhsm', 'kryoptic', 'kryoptic.nss']
 test(
   'ec-point-decode',
   ec_point_test,
+  suite: ['unittests'] + all_suites,
+)
+test(
+  'uri-parse',
+  uri_parse_test,
   suite: ['unittests'] + all_suites,
 )
 foreach suite : all_suites + ['kryoptic.multislot']
