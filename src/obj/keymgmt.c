@@ -569,6 +569,7 @@ static int cmp_public_key_values(P11PROV_OBJ *pub_key1, P11PROV_OBJ *pub_key2)
         break;
     case CKK_ML_DSA:
     case CKK_ML_KEM:
+    case CKK_SLH_DSA:
         ret = cmp_attr(pub_key1, pub_key2, CKA_VALUE);
         break;
     default:
@@ -605,6 +606,7 @@ static int match_key_with_cert(P11PROV_OBJ *priv_key, P11PROV_OBJ *pub_key)
         num = 1;
         break;
     case CKK_ML_DSA:
+    case CKK_SLH_DSA:
         attrs[0].type = CKA_VALUE;
         num = 1;
         break;
@@ -737,6 +739,7 @@ int p11prov_obj_key_cmp(P11PROV_OBJ *key1, P11PROV_OBJ *key2, CK_KEY_TYPE type,
     case CKK_RSA:
     case CKK_ML_DSA:
     case CKK_ML_KEM:
+    case CKK_SLH_DSA:
         break;
 
     case CKK_EC:
