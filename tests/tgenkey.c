@@ -264,8 +264,8 @@ static void sign_test(const char *label, const char *mdname,
     EVP_MD_CTX *ctx = NULL;
     EVP_PKEY_CTX *pctx = NULL;
     const unsigned char data[] = "Plaintext Data";
-    unsigned char sigret[4096];
-    size_t siglen = 4096;
+    unsigned char sigret[8192];
+    size_t siglen = 8192;
     int ret;
 
     fprintf(stdout, "Test signature\n");
@@ -348,8 +348,8 @@ static void sign35_test(const char *sig_type, const char *label,
     EVP_PKEY_CTX *pctx = NULL;
     EVP_SIGNATURE *sig_alg = NULL;
     const unsigned char data[] = "Plaintext Data";
-    unsigned char sigret[4096];
-    size_t siglen = 4096;
+    unsigned char sigret[8192];
+    size_t siglen = 8192;
     int ret;
 
     fprintf(stdout, "Test signature\n");

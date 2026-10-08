@@ -15,7 +15,7 @@ title LINE "Print SLH-DSA Public key from private"
 ossl 'pkey -in $SLHDSAPRIURI -pubout -text' $helper_emit
 output="$helper_output"
 FAIL=0
-echo "$output" | grep "SLH-DSA-SHA2-128s Public Key" > /dev/null 2>&1 || FAIL=1
+echo "$output" | grep "SLH-DSA-SHAKE-128S Public Key" > /dev/null 2>&1 || FAIL=1
 if [ $FAIL -eq 1 ]; then
     echo "Could not extract public key from private"
     echo
@@ -40,6 +40,7 @@ x509 -req -in ${TMPPDIR}/slhdsa_csr.pem
           -out ${TMPPDIR}/slhdsa_signed.crt'
 
 
+title PARA "Test EVP_PKEY_eq on public SLH-DSA key both on token"
 $CHECKER "${TESTBLDDIR}/tcmpkeys" "$SLHDSAPUBURI" "$SLHDSAPUBURI"
 
 title PARA "Test EVP_PKEY_eq on public SLH-DSA key via import"
@@ -62,7 +63,7 @@ title PARA "Generate keys and test signatures"
 title LINE "Generate SLH-DSA-SHAKE-128s key"
 ossl '
 genpkey -propquery "provider=pkcs11"
-        -algorithm SLH-DSA-SHAKE-128s -pkeyopt "pkcs11_uri:pkcs11:object=Test-SLH-DSA-SHA2-192s"
+        -algorithm SLH-DSA-SHAKE-128s -pkeyopt "pkcs11_uri:pkcs11:object=Test-SLH-DSA-SHAKE-128s"
         -out ${TMPPDIR}/slhdsa-shake-128s-genpkey.pem'
 
 title LINE "Sign random data with SLH-DSA-SHAKE-128s"
