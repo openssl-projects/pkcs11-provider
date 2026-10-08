@@ -520,7 +520,7 @@ static CK_RV p11prov_rsasig_operate(P11PROV_SIG_CTX *sigctx, unsigned char *sig,
         }
     }
 
-    if (sigctx->mechtype == CKM_RSA_PKCS && sigctx->digest != 0) {
+    if (!sigctx->digest_op && sigctx->mechtype == CKM_RSA_PKCS && sigctx->digest != 0) {
         rv = p11prov_rsasig_encode_data(sigctx, data, &datalen, tbs, tbslen);
         if (rv != CKR_OK) {
             return rv;
