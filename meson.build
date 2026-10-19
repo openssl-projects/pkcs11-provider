@@ -50,6 +50,12 @@ if not libcrypto.found()
   libcrypto = dependency('libcrypto3', version: '>= 3.0.7', required: true)
 endif
 provider_path = libcrypto.get_variable(pkgconfig: 'modulesdir')
+
+sys_root = meson.get_external_property('sys_root', '')
+if sys_root != '' and provider_path.startswith(sys_root)
+  provider_path = provider_path.replace(sys_root, '')
+endif
+
 libssl = dependency('libssl', version: '>= 3.0.7', required: false)
 if not libssl.found()
   libssl = dependency('libssl3', version: '>= 3.0.7', required: true, method: 'pkg-config')
