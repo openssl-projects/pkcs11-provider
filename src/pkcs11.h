@@ -7,6 +7,10 @@
 #define CRYPTOKI_VERSION_MINOR 2
 #define CRYPTOKI_VERSION_AMENDMENT 0
 
+#if defined(_WIN32)
+#pragma pack(push, cryptoki, 1)
+#endif
+
 /* Basic types */
 typedef unsigned char CK_BBOOL;
 typedef unsigned char CK_BYTE;
@@ -2767,5 +2771,8 @@ struct CK_FUNCTION_LIST {
     CK_C_WaitForSlotEvent C_WaitForSlotEvent;
 };
 
+#if defined(_WIN32)
+#pragma pack(pop, cryptoki)
+#endif
 
 #endif
