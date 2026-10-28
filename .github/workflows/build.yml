@@ -313,6 +313,47 @@ jobs:
           name: coverage-${{ matrix.os }}-${{ matrix.token }}
           path: builddir/meson-logs/coverage.info
 
+  build-msys2:
+    name: CI Windows MSYS2
+    runs-on: windows-latest
+
+    # Force all run steps to use the MSYS2 shell
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            lcov
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-meson
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-dlfcn
+            mingw-w64-ucrt-x86_64-openssl
+
+      - name: Setup
+        run: |
+          git config --global --add safe.directory /__w/pkcs11-provider/pkcs11-provider || true
+          git submodule update --init
+
+          # Using GCC as the compiler for UCRT64
+          CC=gcc meson setup builddir
+
+      - name: Build
+        run: |
+          meson compile -C builddir
+
   setup-openssl:
     name: Build OpenSSL from master branch
     runs-on: ubuntu-22.04
