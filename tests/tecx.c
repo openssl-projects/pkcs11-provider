@@ -74,6 +74,53 @@ static void ecdh_test(EVP_PKEY *a, EVP_PKEY *b)
     }
 }
 
+/* A buffer larger than the shared secret must still get just the secret */
+static void ecdh_outlen_test(EVP_PKEY *a, EVP_PKEY *b)
+{
+    unsigned char secret[128], bigsecret[256];
+    size_t secretlen = 0, bigsecretlen = sizeof(bigsecret);
+    EVP_PKEY_CTX *derivectx;
+
+    derivectx = EVP_PKEY_CTX_new_from_pkey(NULL, a, NULL);
+    if (!derivectx) {
+        fprintf(stderr, "EVP_PKEY_CTX_new_from_pkey failed!\n");
+        ossl_err_print();
+        exit(EXIT_FAILURE);
+    }
+
+    if (EVP_PKEY_derive_init(derivectx) != 1
+        || EVP_PKEY_derive_set_peer(derivectx, b) != 1) {
+        fprintf(stderr, "EVP_PKEY_derive setup failed!\n");
+        ossl_err_print();
+        exit(EXIT_FAILURE);
+    }
+
+    if (EVP_PKEY_derive(derivectx, NULL, &secretlen) != 1
+        || secretlen > sizeof(secret)
+        || EVP_PKEY_derive(derivectx, secret, &secretlen) != 1) {
+        fprintf(stderr, "EVP_PKEY_derive with exact buffer failed!\n");
+        ossl_err_print();
+        exit(EXIT_FAILURE);
+    }
+
+    if (EVP_PKEY_derive(derivectx, bigsecret, &bigsecretlen) != 1) {
+        fprintf(stderr, "EVP_PKEY_derive with larger buffer failed!\n");
+        ossl_err_print();
+        exit(EXIT_FAILURE);
+    }
+
+    EVP_PKEY_CTX_free(derivectx);
+
+    if (bigsecretlen != secretlen
+        || memcmp(secret, bigsecret, secretlen) != 0) {
+        fprintf(stderr,
+                "Secret derived into a %zu-byte buffer has %zu bytes, "
+                "expected the %zu-byte secret!\n",
+                sizeof(bigsecret), bigsecretlen, secretlen);
+        exit(EXIT_FAILURE);
+    }
+}
+
 int main(int argc, char *argv[])
 {
     EVP_PKEY *a, *b;
@@ -86,6 +133,7 @@ int main(int argc, char *argv[])
     b = load_key(argv[2]);
 
     ecdh_test(a, b);
+    ecdh_outlen_test(a, b);
 
     EVP_PKEY_free(a);
     EVP_PKEY_free(b);
