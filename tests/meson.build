@@ -97,6 +97,7 @@ endif
 
 test_programs = {
   'tsession': ['tsession.c'],
+  'tsigbuf': ['tsigbuf.c', 'util.c'],
   'tgenkey': ['tgenkey.c', 'util.c'],
   'tlsctx': ['tlsctx.c', 'util.c'],
   'tlssetkey': ['tlssetkey.c', 'util.c'],
@@ -194,6 +195,7 @@ tests = {
   'pkey': {'suites': all_suites},
   'pkey_provider': {'suites': ['kryoptic', 'kryoptic.nss', 'softokn']},
   'session': {'suites': all_suites},
+  'sigbuf': {'suites': ['softokn']},
   'skey': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss'], 'timeout': 90},
   'rand': {'suites': all_suites},
   'readkeys': {'suites': all_suites},
