@@ -303,6 +303,8 @@ static void *p11prov_ecdh_derive_skey(void *ctx, const char *key_type,
     if (ret != CKR_OK) {
         return NULL;
     }
+    /* the context may derive more than once, drop the previous copy */
+    OPENSSL_free(ecdhctx->ecdh_params.pPublicData);
     ecdhctx->ecdh_params.pPublicData = point.pValue;
     ecdhctx->ecdh_params.ulPublicDataLen = point.ulValueLen;
 
@@ -341,13 +343,20 @@ static int p11prov_ecdh_derive(void *ctx, unsigned char *secret,
     P11PROV_OBJ *skey;
     CK_OBJECT_HANDLE secret_handle;
     struct fetch_attrs attrs[1];
+    CK_ULONG key_size;
     int num = 0;
     CK_RV ret;
     int err = RET_OSSL_ERR;
 
+    key_size = p11prov_obj_get_key_size(ecdhctx->key);
     if (!secret) {
-        *psecretlen = p11prov_obj_get_key_size(ecdhctx->key);
+        *psecretlen = key_size;
         return RET_OSSL_OK;
+    }
+
+    /* A buffer larger than the shared secret must not change the secret */
+    if (key_size != CK_UNAVAILABLE_INFORMATION && outlen > key_size) {
+        outlen = key_size;
     }
 
     skey = p11prov_ecdh_derive_skey(ctx, "GENERIC-SECRET", NULL, NULL, outlen,
