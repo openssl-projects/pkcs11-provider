@@ -303,6 +303,8 @@ static void *p11prov_ecdh_derive_skey(void *ctx, const char *key_type,
     if (ret != CKR_OK) {
         return NULL;
     }
+    /* the context may derive more than once, drop the previous copy */
+    OPENSSL_free(ecdhctx->ecdh_params.pPublicData);
     ecdhctx->ecdh_params.pPublicData = point.pValue;
     ecdhctx->ecdh_params.ulPublicDataLen = point.ulValueLen;
 
