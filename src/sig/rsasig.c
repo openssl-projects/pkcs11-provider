@@ -510,11 +510,18 @@ static CK_RV p11prov_rsasig_operate(P11PROV_SIG_CTX *sigctx, unsigned char *sig,
     CK_RV rv;
 
     if (sigctx->operation == CKF_SIGN && sigctx->mechtype == CKM_RSA_X_509) {
+        size_t modsize;
+
         /* some tokens allow raw signatures on any data size.
          * Enforce data size is the same as modulus as that is
          * what OpenSSL expects and does internally in rsa_sign
-         * when there is no padding. */
-        if (tbslen < sigsize) {
+         * when there is no padding. The size of the output buffer
+         * can be larger than the modulus, so it can't be used here. */
+        rv = p11prov_rsa_sig_size(sigctx, &modsize);
+        if (rv != CKR_OK) {
+            return rv;
+        }
+        if (tbslen < modsize) {
             ERR_raise(ERR_LIB_RSA, RSA_R_DATA_TOO_SMALL_FOR_KEY_SIZE);
             return CKR_DATA_LEN_RANGE;
         }

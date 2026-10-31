@@ -118,6 +118,7 @@ test_programs = {
   'taead': ['taead.c', 'util.c'],
   'tsshkdf': ['tsshkdf.c', 'util.c'],
   'loadprov': ['loadprov.c', 'util.c'],
+  'trsaraw': ['trsaraw.c', 'util.c'],
 }
 
 test_executables = []
@@ -187,6 +188,7 @@ tests = {
   'imported' : {'suites': ['softokn', 'kryoptic', 'kryoptic.nss']},
   'pem_encoder': {'suites': all_suites},
   'rsa': {'suites': all_suites},
+  'rsaraw': {'suites': ['softokn']},
   'rsapss': {'suites': all_suites},
   'rsapssam': {'suites': ['softhsm', 'kryoptic']},
   'genkey': {'suites': all_suites},
