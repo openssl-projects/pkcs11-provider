@@ -196,6 +196,40 @@ done:
     return newctx;
 }
 
+/* Finalize the operation left active on a session to avoid returning it to
+ * the pool with a hanging operation. Ignore return errors here intentionally
+ * as errors can be returned if the operation was internally finalized
+ * because of a previous internal token error state and, in any case, not
+ * much to be done. */
+static void sig_cancel_operation(P11PROV_SIG_CTX *sigctx,
+                                 P11PROV_SESSION *session)
+{
+    CK_RV ret;
+    CK_SESSION_HANDLE sess = p11prov_session_handle(session);
+
+    if (sigctx->operation == CKF_SIGN) {
+        ret = p11prov_SignInit(sigctx->provctx, sess, NULL, CK_INVALID_HANDLE);
+    } else if (sigctx->verify_signature) {
+        ret = p11prov_VerifySignatureInit(sigctx->provctx, sess, NULL,
+                                          CK_INVALID_HANDLE, NULL, 0);
+    } else {
+        ret =
+            p11prov_VerifyInit(sigctx->provctx, sess, NULL, CK_INVALID_HANDLE);
+    }
+    if (ret != CKR_OK) {
+        /* NSS softokn has a broken interface and is incapable of
+         * dropping operations on sessions returning a generic
+         * CKR_MECHANISM_PARAM_INVALID when the mechanism is set to
+         * NULL. Attempt to force cancellation via C_SessionCancel. */
+        ret = p11prov_SessionCancel(sigctx->provctx, sess, sigctx->operation);
+    }
+    if (ret != CKR_OK) {
+        /* When this happens the session becomes broken as
+         * we can't initialize operations on it anymore */
+        p11prov_session_mark_broken(session);
+    }
+}
+
 void p11prov_sig_freectx(void *ctx)
 {
     P11PROV_SIG_CTX *sigctx = (P11PROV_SIG_CTX *)ctx;
@@ -206,36 +240,7 @@ void p11prov_sig_freectx(void *ctx)
 
     if (sigctx->session) {
         if (sigctx->session_state == SESS_INITIALIZED) {
-            /* Finalize any operation to avoid leaving a hanging
-             * operation on this session. Ignore return errors here
-             * intentionally as errors can be returned if the operation was
-             * internally finalized because of a previous internal token
-             * error state and, in any case, not much to be done. */
-            CK_RV ret;
-            CK_SESSION_HANDLE sess = p11prov_session_handle(sigctx->session);
-            if (sigctx->operation == CKF_SIGN) {
-                ret = p11prov_SignInit(sigctx->provctx, sess, NULL,
-                                       CK_INVALID_HANDLE);
-            } else if (sigctx->verify_signature) {
-                ret = p11prov_VerifySignatureInit(sigctx->provctx, sess, NULL,
-                                                  CK_INVALID_HANDLE, NULL, 0);
-            } else {
-                ret = p11prov_VerifyInit(sigctx->provctx, sess, NULL,
-                                         CK_INVALID_HANDLE);
-            }
-            if (ret != CKR_OK) {
-                /* NSS softokn has a broken interface and is incapable of
-                 * dropping operations on sessions returning a generic
-                 * CKR_MECHANISM_PARAM_INVALID when the mechanism is set to
-                 * NULL. Attempt to force cancellation via C_SessionCancel. */
-                ret = p11prov_SessionCancel(sigctx->provctx, sess,
-                                            sigctx->operation);
-            }
-            if (ret != CKR_OK) {
-                /* When this happens the session becomes broken as
-                 * we can't initialize operations on it anymore */
-                p11prov_session_mark_broken(sigctx->session);
-            }
+            sig_cancel_operation(sigctx, sigctx->session);
             sigctx->session_state = SESS_FINALIZED;
         }
         p11prov_return_session(sigctx->session);
@@ -490,6 +495,11 @@ CK_RV p11prov_sig_operate(P11PROV_SIG_CTX *sigctx, unsigned char *sig,
 
     if (sigctx->operation == CKF_SIGN) {
         ret = p11prov_Sign(sigctx->provctx, sess, tbs, tbslen, sig, &sig_size);
+        if (ret == CKR_BUFFER_TOO_SMALL) {
+            /* The token keeps the signing operation active in this case,
+             * so it must be dropped before the session is reused. */
+            sig_cancel_operation(sigctx, session);
+        }
     } else if (sigctx->verify_signature) {
         ret = p11prov_VerifySignature(sigctx->provctx, sess, tbs, tbslen);
     } else {
@@ -652,6 +662,11 @@ int p11prov_sig_digest_final(P11PROV_SIG_CTX *sigctx, unsigned char *sig,
     sess = p11prov_session_handle(sigctx->session);
     if (sigctx->operation == CKF_SIGN) {
         ret = p11prov_SignFinal(sigctx->provctx, sess, sig, &sig_size);
+        if (ret == CKR_BUFFER_TOO_SMALL) {
+            /* Same as in p11prov_sig_operate(), the operation is still
+             * active and must be dropped before returning the session. */
+            sig_cancel_operation(sigctx, sigctx->session);
+        }
     } else if (sigctx->verify_signature) {
         ret = p11prov_VerifySignatureFinal(sigctx->provctx, sess);
     } else {
