@@ -521,8 +521,10 @@ static CK_RV p11prov_rsasig_operate(P11PROV_SIG_CTX *sigctx, unsigned char *sig,
         if (rv != CKR_OK) {
             return rv;
         }
-        if (tbslen < modsize) {
-            ERR_raise(ERR_LIB_RSA, RSA_R_DATA_TOO_SMALL_FOR_KEY_SIZE);
+        if (tbslen != modsize) {
+            ERR_raise(ERR_LIB_RSA, tbslen < modsize
+                                       ? RSA_R_DATA_TOO_SMALL_FOR_KEY_SIZE
+                                       : RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE);
             return CKR_DATA_LEN_RANGE;
         }
     }

@@ -4,11 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <openssl/bn.h>
-#include <openssl/core_names.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
-#include <openssl/param_build.h>
 #include <openssl/rsa.h>
 #include "util.h"
 
@@ -21,9 +18,16 @@ static int raw_sign(EVP_PKEY *key, const unsigned char *tbs, size_t tbslen,
     int ret;
 
     ctx = EVP_PKEY_CTX_new_from_pkey(NULL, key, NULL);
-    if (ctx == NULL || EVP_PKEY_sign_init(ctx) != 1
-        || EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_NO_PADDING) != 1) {
+    if (ctx == NULL) {
+        PRINTERROSSL("Failed to create a sign context\n");
+        exit(EXIT_FAILURE);
+    }
+    if (EVP_PKEY_sign_init(ctx) != 1) {
         PRINTERROSSL("Failed to init raw RSA sign\n");
+        exit(EXIT_FAILURE);
+    }
+    if (EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_NO_PADDING) != 1) {
+        PRINTERROSSL("Failed to set no padding\n");
         exit(EXIT_FAILURE);
     }
 
@@ -62,46 +66,25 @@ static void check_large_buffer(EVP_PKEY *key, const char *name,
     }
 }
 
-/* Copy the public numbers of a token key into a default provider key */
-static EVP_PKEY *default_pubkey(EVP_PKEY *pub)
-{
-    BIGNUM *n = NULL, *e = NULL;
-    OSSL_PARAM_BLD *bld = OSSL_PARAM_BLD_new();
-    OSSL_PARAM *params = NULL;
-    EVP_PKEY_CTX *ctx = NULL;
-    EVP_PKEY *key = NULL;
-
-    if (bld == NULL
-        || EVP_PKEY_get_bn_param(pub, OSSL_PKEY_PARAM_RSA_N, &n) != 1
-        || EVP_PKEY_get_bn_param(pub, OSSL_PKEY_PARAM_RSA_E, &e) != 1
-        || OSSL_PARAM_BLD_push_BN(bld, OSSL_PKEY_PARAM_RSA_N, n) != 1
-        || OSSL_PARAM_BLD_push_BN(bld, OSSL_PKEY_PARAM_RSA_E, e) != 1
-        || (params = OSSL_PARAM_BLD_to_param(bld)) == NULL
-        || (ctx = EVP_PKEY_CTX_new_from_name(NULL, "RSA", "provider=default"))
-               == NULL
-        || EVP_PKEY_fromdata_init(ctx) != 1
-        || EVP_PKEY_fromdata(ctx, &key, EVP_PKEY_PUBLIC_KEY, params) != 1) {
-        PRINTERROSSL("Failed to create default provider public key\n");
-        exit(EXIT_FAILURE);
-    }
-
-    EVP_PKEY_CTX_free(ctx);
-    OSSL_PARAM_free(params);
-    OSSL_PARAM_BLD_free(bld);
-    BN_free(n);
-    BN_free(e);
-    return key;
-}
-
 static EVP_PKEY *default_prikey(void)
 {
     EVP_PKEY_CTX *ctx;
     EVP_PKEY *key = NULL;
 
     ctx = EVP_PKEY_CTX_new_from_name(NULL, "RSA", "provider=default");
-    if (ctx == NULL || EVP_PKEY_keygen_init(ctx) != 1
-        || EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, 2048) != 1
-        || EVP_PKEY_keygen(ctx, &key) != 1) {
+    if (ctx == NULL) {
+        PRINTERROSSL("Failed to create a default provider keygen context\n");
+        exit(EXIT_FAILURE);
+    }
+    if (EVP_PKEY_keygen_init(ctx) != 1) {
+        PRINTERROSSL("Failed to init keygen\n");
+        exit(EXIT_FAILURE);
+    }
+    if (EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, 2048) != 1) {
+        PRINTERROSSL("Failed to set keygen bits\n");
+        exit(EXIT_FAILURE);
+    }
+    if (EVP_PKEY_keygen(ctx, &key) != 1) {
         PRINTERROSSL("Failed to generate default provider key\n");
         exit(EXIT_FAILURE);
     }
@@ -110,8 +93,9 @@ static EVP_PKEY *default_prikey(void)
 }
 
 /* Recover the data from a raw signature using the default provider, which
- * must give back the data that was signed on the token. */
-static void check_recover(EVP_PKEY *defpub, const unsigned char *tbs,
+ * must give back the data that was signed on the token. Fetching the
+ * operation from the default provider exports the token public key to it. */
+static void check_recover(EVP_PKEY *pubkey, const unsigned char *tbs,
                           size_t modsize, const unsigned char *sig,
                           size_t siglen)
 {
@@ -120,14 +104,32 @@ static void check_recover(EVP_PKEY *defpub, const unsigned char *tbs,
     EVP_PKEY_CTX *ctx;
 
     rec = OPENSSL_zalloc(reclen);
-    ctx = EVP_PKEY_CTX_new_from_pkey(NULL, defpub, "provider=default");
-    if (rec == NULL || ctx == NULL || EVP_PKEY_verify_recover_init(ctx) != 1
-        || EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_NO_PADDING) != 1
-        || EVP_PKEY_verify_recover(ctx, rec, &reclen, sig, siglen) != 1) {
+    if (rec == NULL) {
+        PRINTERR("Failed to allocate the recover buffer\n");
+        exit(EXIT_FAILURE);
+    }
+    ctx = EVP_PKEY_CTX_new_from_pkey(NULL, pubkey, "provider=default");
+    if (ctx == NULL) {
+        PRINTERROSSL("Failed to create a default provider context\n");
+        exit(EXIT_FAILURE);
+    }
+    if (EVP_PKEY_verify_recover_init(ctx) != 1) {
+        PRINTERROSSL("Failed to init verify recover\n");
+        exit(EXIT_FAILURE);
+    }
+    if (EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_NO_PADDING) != 1) {
+        PRINTERROSSL("Failed to set no padding for verify recover\n");
+        exit(EXIT_FAILURE);
+    }
+    if (EVP_PKEY_verify_recover(ctx, rec, &reclen, sig, siglen) != 1) {
         PRINTERROSSL("Failed to recover data with the default provider\n");
         exit(EXIT_FAILURE);
     }
-    if (reclen != modsize || memcmp(rec, tbs, modsize) != 0) {
+    if (reclen != modsize) {
+        PRINTERR("Recovered %zu bytes, expected %zu\n", reclen, modsize);
+        exit(EXIT_FAILURE);
+    }
+    if (memcmp(rec, tbs, modsize) != 0) {
         PRINTERR("Default provider recovered different data than signed\n");
         exit(EXIT_FAILURE);
     }
@@ -140,7 +142,7 @@ int main(int argc, char *argv[])
 {
     const char *priuri = getenv("PRIURI");
     const char *puburi = getenv("PUBURI");
-    EVP_PKEY *prikey, *pubkey, *defpri, *defpub;
+    EVP_PKEY *prikey, *pubkey, *defpri;
     unsigned char *tbs, *sig;
     size_t modsize, siglen;
 
@@ -157,7 +159,8 @@ int main(int argc, char *argv[])
     pubkey = load_key(puburi);
     modsize = EVP_PKEY_get_size(prikey);
 
-    tbs = OPENSSL_zalloc(modsize);
+    /* one extra byte to also try data longer than the modulus */
+    tbs = OPENSSL_zalloc(modsize + 1);
     sig = OPENSSL_zalloc(2 * modsize);
     if (tbs == NULL || sig == NULL) {
         PRINTERR("Failed to allocate buffers\n");
@@ -171,9 +174,13 @@ int main(int argc, char *argv[])
 
     /* Buffer of exactly the modulus size */
     siglen = modsize;
-    if (raw_sign(prikey, tbs, modsize, sig, &siglen) != 1
-        || siglen != modsize) {
+    if (raw_sign(prikey, tbs, modsize, sig, &siglen) != 1) {
         PRINTERROSSL("Raw sign with a modulus size buffer failed\n");
+        exit(EXIT_FAILURE);
+    }
+    if (siglen != modsize) {
+        PRINTERR("Unexpected signature length %zu, expected %zu\n", siglen,
+                 modsize);
         exit(EXIT_FAILURE);
     }
 
@@ -185,8 +192,7 @@ int main(int argc, char *argv[])
 
     /* The signature made on the token is the one the default provider
      * recovers the data from. */
-    defpub = default_pubkey(pubkey);
-    check_recover(defpub, tbs, modsize, sig, modsize);
+    check_recover(pubkey, tbs, modsize, sig, modsize);
 
     /* Data shorter than the modulus is still refused */
     siglen = 2 * modsize;
@@ -196,12 +202,19 @@ int main(int argc, char *argv[])
     }
     ERR_clear_error();
 
+    /* Data longer than the modulus is refused too */
+    siglen = 2 * modsize;
+    if (raw_sign(prikey, tbs, modsize + 1, sig, &siglen) == 1) {
+        PRINTERR("Raw sign of data longer than the modulus succeeded\n");
+        exit(EXIT_FAILURE);
+    }
+    ERR_clear_error();
+
     OPENSSL_free(tbs);
     OPENSSL_free(sig);
     EVP_PKEY_free(prikey);
     EVP_PKEY_free(pubkey);
     EVP_PKEY_free(defpri);
-    EVP_PKEY_free(defpub);
 
     PRINTERR("ALL A-OK!\n");
     exit(EXIT_SUCCESS);
