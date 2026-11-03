@@ -118,6 +118,7 @@ test_programs = {
   'tskey-kdf': ['tskey_kdf.c', 'util.c'],
   'taead': ['taead.c', 'util.c'],
   'tsshkdf': ['tsshkdf.c', 'util.c'],
+  'thkdfextract': ['thkdfextract.c', 'util.c'],
   'loadprov': ['loadprov.c', 'util.c'],
   'trsaraw': ['trsaraw.c', 'util.c'],
 }
@@ -185,6 +186,7 @@ tests = {
   'fork': {'suites': all_suites},
   'oaepsha2': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss']},
   'hkdf': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss']},
+  'hkdfextract': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss']},
   'sshkdf': {'suites': all_suites},
   'imported' : {'suites': ['softokn', 'kryoptic', 'kryoptic.nss']},
   'pem_encoder': {'suites': all_suites},

@@ -297,6 +297,31 @@ static int p11prov_hkdf_format_params(P11PROV_KDF_CTX *hkdfctx,
     return CKR_OK;
 }
 
+/* In extract-only mode the output is the PRK, exactly one digest long.
+ * Reject any other output length before deriving, like the default provider
+ * does. */
+static int p11prov_hkdf_check_extract_len(P11PROV_KDF_CTX *hkdfctx,
+                                          size_t keylen)
+{
+    size_t hashlen = 0;
+    CK_RV ret;
+
+    if (hkdfctx->mode != EVP_KDF_HKDF_MODE_EXTRACT_ONLY) {
+        return RET_OSSL_OK;
+    }
+
+    ret = p11prov_digest_get_digest_size(hkdfctx->hash_mech, &hashlen);
+    if (ret != CKR_OK) {
+        ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_DIGEST);
+        return RET_OSSL_ERR;
+    }
+    if (keylen != hashlen) {
+        ERR_raise(ERR_LIB_PROV, PROV_R_WRONG_OUTPUT_BUFFER_SIZE);
+        return RET_OSSL_ERR;
+    }
+    return RET_OSSL_OK;
+}
+
 static int p11prov_hkdf_derive(void *ctx, unsigned char *key, size_t keylen,
                                const OSSL_PARAM params[])
 {
@@ -334,6 +359,10 @@ static int p11prov_hkdf_derive(void *ctx, unsigned char *key, size_t keylen,
     ret = p11prov_hkdf_format_params(hkdfctx, &ck_params);
     if (ret != CKR_OK) {
         P11PROV_raise(hkdfctx->provctx, ret, "Invalid params");
+        return RET_OSSL_ERR;
+    }
+
+    if (p11prov_hkdf_check_extract_len(hkdfctx, keylen) != RET_OSSL_OK) {
         return RET_OSSL_ERR;
     }
 
@@ -650,6 +679,10 @@ static int p11prov_tls13_kdf_derive(void *ctx, unsigned char *key,
 
     if (keylen == 0) {
         ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_KEY_LENGTH);
+        return RET_OSSL_ERR;
+    }
+
+    if (p11prov_hkdf_check_extract_len(hkdfctx, keylen) != RET_OSSL_OK) {
         return RET_OSSL_ERR;
     }
 
