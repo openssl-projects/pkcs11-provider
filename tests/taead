@@ -30,7 +30,7 @@ title PARA "Test AEAD support"
 
 for alg in "${ALGORITHMS[@]}"; do
     echo "Checking algorithm $alg"
-    if $OPENSSL list -cipher-algorithms -propquery "provider=pkcs11" 2>/dev/null | grep -q "$alg"; then
+    if $OPENSSL list -cipher-algorithms -propquery "provider=pkcs11" 2>/dev/null | grep -iq "$alg"; then
         title PARA "Run AEAD test with $alg"
         $CHECKER "${TESTBLDDIR}/taead" "$alg" "$KEY" "$IV" "$AAD" "$DATA"
     else
