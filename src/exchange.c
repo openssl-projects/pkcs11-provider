@@ -347,6 +347,8 @@ static int p11prov_ecdh_derive(void *ctx, unsigned char *secret,
     int num = 0;
     CK_RV ret;
     int err = RET_OSSL_ERR;
+    unsigned char *full = NULL;
+    size_t reqlen;
 
     key_size = p11prov_obj_get_key_size(ecdhctx->key);
     if (!secret) {
@@ -359,9 +361,23 @@ static int p11prov_ecdh_derive(void *ctx, unsigned char *secret,
         outlen = key_size;
     }
 
-    skey = p11prov_ecdh_derive_skey(ctx, "GENERIC-SECRET", NULL, NULL, outlen,
+    /* PKCS#11 truncates a derived key from the leading end, but OpenSSL
+     * returns the leading bytes of the shared secret, so without a KDF get
+     * the whole secret and truncate it here. */
+    reqlen = outlen;
+    if (ecdhctx->ecdh_params.kdf == CKD_NULL
+        && key_size != CK_UNAVAILABLE_INFORMATION && outlen < key_size) {
+        reqlen = key_size;
+        full = OPENSSL_malloc(reqlen);
+        if (!full) {
+            return RET_OSSL_ERR;
+        }
+    }
+
+    skey = p11prov_ecdh_derive_skey(ctx, "GENERIC-SECRET", NULL, NULL, reqlen,
                                     params);
     if (!skey) {
+        OPENSSL_free(full);
         return RET_OSSL_ERR;
     }
 
@@ -372,7 +388,7 @@ static int p11prov_ecdh_derive(void *ctx, unsigned char *secret,
         goto done;
     }
 
-    FA_SET_BUF_VAL(attrs, num, CKA_VALUE, secret, outlen, true);
+    FA_SET_BUF_VAL(attrs, num, CKA_VALUE, full ? full : secret, reqlen, true);
     ret = p11prov_fetch_attributes(ecdhctx->provctx, ecdhctx->session,
                                    secret_handle, attrs, num);
     if (ret != CKR_OK) {
@@ -380,9 +396,14 @@ static int p11prov_ecdh_derive(void *ctx, unsigned char *secret,
         goto done;
     }
     FA_GET_LEN(attrs, 0, *psecretlen);
+    if (full) {
+        memcpy(secret, full, outlen);
+        *psecretlen = outlen;
+    }
     err = RET_OSSL_OK;
 
 done:
+    OPENSSL_clear_free(full, reqlen);
     p11prov_obj_free(skey);
     return err;
 }
