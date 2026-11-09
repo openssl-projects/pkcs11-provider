@@ -397,6 +397,9 @@ static int get_pin_source(P11PROV_CTX *ctx, const char *str, size_t len,
         ret = get_pin_env(ctx, pinsource + 4, output);
     } else if (*pinsource == '|') {
         ret = EINVAL;
+    } else {
+        /* no scheme: a path, as in other PKCS#11 URI consumers */
+        ret = get_pin_file(ctx, pinsource, output);
     }
     OPENSSL_free(pinsource);
     return ret;
