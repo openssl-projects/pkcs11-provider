@@ -534,6 +534,31 @@ echo "${ECPRI2URI}"
 echo "${ECCRT2URI}"
 echo ""
 
+if [ "$SUPPORT_ED25519_KEY_GEN" -ne 0 ]; then
+    title PARA "generate ED25519 key pair, self-signed certificate, remove public key"
+    get_next_keyid
+    EDCRTN2="edCert2"
+
+    gen_keypair "$SUPPORT_ED25519_KEY_GEN" "EC:edwards25519" "ED25519" \
+                "${EDCRTN2}" "${KEYID}" "${URIKEYID}"
+    ca_sign $EDCRTN2 "My ED25519 Cert 2" "$KEYID"
+    ptool --delete-object --type pubkey --id "$KEYID" 2>&1
+
+    EDBASE2URIWITHPINVALUE="pkcs11:id=${URIKEYID}?pin-value=${PINVALUE}"
+    EDBASE2URIWITHPINSOURCE="pkcs11:id=${URIKEYID}?pin-source=file:${PINFILE}"
+    EDBASE2URI="pkcs11:id=${URIKEYID}"
+    EDPRI2URI="pkcs11:type=private;id=${URIKEYID}"
+    EDCRT2URI="pkcs11:type=cert;object=${EDCRTN2}"
+
+    title LINE "ED25519 2 PKCS11 URIS"
+    echo "${EDBASE2URIWITHPINVALUE}"
+    echo "${EDBASE2URIWITHPINSOURCE}"
+    echo "${EDBASE2URI}"
+    echo "${EDPRI2URI}"
+    echo "${EDCRT2URI}"
+    echo ""
+fi
+
 if [ -z "${ENABLE_EXPLICIT_EC_TEST}" ]; then
     title PARA "explicit EC unsupported"
 elif [ "${TOKENTYPE}" == "softokn" ]; then
@@ -812,6 +837,17 @@ export EDBASEURI="${EDBASEURI}"
 export EDPUBURI="${EDPUBURI}"
 export EDPRIURI="${EDPRIURI}"
 export EDCRTURI="${EDCRTURI}"
+DBGSCRIPT
+fi
+
+if [ -n "${EDBASE2URI}" ]; then
+    cat >> "${TMPPDIR}/testvars" <<DBGSCRIPT
+
+export EDBASE2URIWITHPINVALUE="${EDBASE2URIWITHPINVALUE}"
+export EDBASE2URIWITHPINSOURCE="${EDBASE2URIWITHPINSOURCE}"
+export EDBASE2URI="${EDBASE2URI}"
+export EDPRI2URI="${EDPRI2URI}"
+export EDCRT2URI="${EDCRT2URI}"
 DBGSCRIPT
 fi
 

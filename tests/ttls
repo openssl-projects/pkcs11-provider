@@ -42,6 +42,11 @@ if [ -n "$ECBASE2URI" ]; then
     $CHECKER "${TESTBLDDIR}/tlssetkey" "${ECCRT2URI}" "${ECPRI2URI}"
 fi
 
+if [ -n "$EDBASE2URI" ]; then
+    title PARA "Test setting cert/keys on TLS Context w/o pub key (ED25519)"
+    $CHECKER "${TESTBLDDIR}/tlssetkey" "${EDCRT2URI}" "${EDPRI2URI}"
+fi
+
 title PARA "Test an actual TLS connection"
 
 rm -f "${TMPPDIR}/s_server_output"

@@ -51,28 +51,28 @@ CK_RV get_attrs_from_cert(P11PROV_OBJ *crt, CK_ATTRIBUTE *attrs, int num)
         goto done;
     }
 
-    /* All the other key types have public key material available on private key
-     * object and they could not reach here */
-    if (EVP_PKEY_is_a(pkey, "EC")) {
-        for (int i = 0; i < num; i++) {
-            switch (attrs[i].type) {
-            case CKA_P11PROV_CURVE_NAME:
-                types[attrnum] = CKA_P11PROV_CURVE_NAME;
-                params[attrnum] = OSSL_PARAM_construct_utf8_string(
-                    OSSL_PKEY_PARAM_GROUP_NAME, NULL, 0);
-                attrnum++;
-                break;
-            case CKA_P11PROV_PUB_KEY:
-                types[attrnum] = CKA_P11PROV_PUB_KEY;
-                params[attrnum] = OSSL_PARAM_construct_octet_string(
-                    OSSL_PKEY_PARAM_PUB_KEY, NULL, 0);
-                attrnum++;
-                break;
-            }
-        }
-    } else {
+    /* RSA private key objects always carry the public key material and can
+     * not reach here. Other key types may have it only in the certificate. */
+    if (EVP_PKEY_is_a(pkey, "RSA") || EVP_PKEY_is_a(pkey, "RSA-PSS")) {
         rv = CKR_OBJECT_HANDLE_INVALID;
         goto done;
+    }
+    for (int i = 0; i < num; i++) {
+        switch (attrs[i].type) {
+        case CKA_P11PROV_CURVE_NAME:
+            types[attrnum] = CKA_P11PROV_CURVE_NAME;
+            params[attrnum] = OSSL_PARAM_construct_utf8_string(
+                OSSL_PKEY_PARAM_GROUP_NAME, NULL, 0);
+            attrnum++;
+            break;
+        case CKA_P11PROV_PUB_KEY:
+        case CKA_VALUE:
+            types[attrnum] = attrs[i].type;
+            params[attrnum] = OSSL_PARAM_construct_octet_string(
+                OSSL_PKEY_PARAM_PUB_KEY, NULL, 0);
+            attrnum++;
+            break;
+        }
     }
     if (attrnum == 0) {
         rv = CKR_ARGUMENTS_BAD;

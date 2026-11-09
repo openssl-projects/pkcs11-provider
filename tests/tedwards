@@ -95,6 +95,7 @@ if [[ "${SUPPORT_EDDSA_PARAMS}" = "1" ]]; then
 fi
 
 title PARA "Duplicate the key"
+# shellcheck disable=SC2153 # It is correctly defined in the testvars
 $CHECKER "${TESTBLDDIR}/tdupkey" "$EDPRIURI" "$EDPUBURI"
 
 title PARA "Test CSR generation from private ED25519 keys"
@@ -112,6 +113,13 @@ title PARA "Match private ED key against public key"
 $CHECKER "${TESTBLDDIR}/tcmpkeys" "$EDPRIURI" "${TMPPDIR}"/edout.pub
 title PARA "Match private ED key against public key (commutativity)"
 $CHECKER "${TESTBLDDIR}/tcmpkeys" "${TMPPDIR}"/edout.pub "$EDPRIURI"
+
+if [ -n "$EDPRI2URI" ]; then
+    title PARA "Match private ED25519 key against certificate, no public key object"
+    ossl 'x509 -in "$EDCRT2URI" -pubkey -noout -out ${TMPPDIR}/ed25519-nopub.pub.pem'
+    $CHECKER "${TESTBLDDIR}/tcmpkeys" "$EDPRI2URI" "${TMPPDIR}/ed25519-nopub.pub.pem"
+    $CHECKER "${TESTBLDDIR}/tcmpkeys" "${TMPPDIR}/ed25519-nopub.pub.pem" "$EDPRI2URI"
+fi
 
 title PARA "Test Key generation"
 output=$($CHECKER "${TESTBLDDIR}"/tgenkey "ED25519" 2>&1 || true)
@@ -224,6 +232,7 @@ if [[ -n $ED2BASEURI ]]; then
     title PARA "Test EVP_PKEY_eq on public ED448 key via import"
     $CHECKER "${TESTBLDDIR}/tcmpkeys" "$ED2PUBURI" "${TMPPDIR}"/ed2out.pub
     title PARA "Match private ED448 key against public key"
+    # shellcheck disable=SC2153 # It is correctly defined in the testvars
     $CHECKER "${TESTBLDDIR}/tcmpkeys" "$ED2PRIURI" "${TMPPDIR}"/ed2out.pub
     title PARA "Match private ED448 key against public key (commutativity)"
     $CHECKER "${TESTBLDDIR}/tcmpkeys" "${TMPPDIR}"/ed2out.pub "$ED2PRIURI"
