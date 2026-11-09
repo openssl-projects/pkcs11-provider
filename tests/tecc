@@ -124,6 +124,9 @@ pkeyutl -verify -inkey "${ECBASEURI}" -pubin
                 -rawin
                 -sigfile ${TMPPDIR}/sha3-512-ecdgstsig.bin'
 
+title PARA "Duplicate the key"
+$CHECKER "${TESTBLDDIR}/tdupkey" "$ECPRIURI" "$ECPUBURI"
+
 title PARA "Test CSR generation from private ECC keys"
 ossl '
 req -new -batch -key "${ECPRIURI}" -out ${TMPPDIR}/ecdsa_csr.pem'

@@ -25,6 +25,9 @@ if [ $FAIL -eq 1 ]; then
     exit 1
 fi
 
+title PARA "Duplicate the key"
+$CHECKER "${TESTBLDDIR}/tdupkey" "$MLDSAPRIURI" "$MLDSAPUBURI"
+
 title PARA "Test CSR generation from private ML-DSA keys"
 ossl '
 req -new -batch -key "${MLDSAPRIURI}" -out ${TMPPDIR}/mldsa_csr.pem'

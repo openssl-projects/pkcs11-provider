@@ -976,6 +976,8 @@ static const OSSL_PARAM *p11prov_ec_settable_params(void *provctx)
     return params;
 }
 
+DEFINE_KEYMGMT_DUP(ec, ec)
+
 const OSSL_DISPATCH p11prov_ec_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(ec, NEW, new),
     DISPATCH_KEYMGMT_ELEM(ec, GEN_INIT, gen_init),
@@ -985,6 +987,7 @@ const OSSL_DISPATCH p11prov_ec_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(ec, GEN_SETTABLE_PARAMS, gen_settable_params),
     DISPATCH_KEYMGMT_ELEM(ec, LOAD, load),
     DISPATCH_KEYMGMT_ELEM(kmgmt, FREE, free),
+    DISPATCH_KEYMGMT_ELEM(ec, DUP, dup),
     DISPATCH_KEYMGMT_ELEM(kmgmt, HAS, has),
     DISPATCH_KEYMGMT_ELEM(ec, MATCH, match),
     DISPATCH_KEYMGMT_ELEM(ec, IMPORT, import),
@@ -1417,6 +1420,8 @@ static const OSSL_PARAM *p11prov_ed_settable_params(void *provctx)
     return params;
 }
 
+DEFINE_KEYMGMT_DUP(ed, ed)
+
 const OSSL_DISPATCH p11prov_ed25519_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(ed, NEW, new),
     DISPATCH_KEYMGMT_ELEM(ed25519, GEN_INIT, gen_init),
@@ -1426,6 +1431,7 @@ const OSSL_DISPATCH p11prov_ed25519_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(ed, GEN_SETTABLE_PARAMS, gen_settable_params),
     DISPATCH_KEYMGMT_ELEM(ed, LOAD, load),
     DISPATCH_KEYMGMT_ELEM(kmgmt, FREE, free),
+    DISPATCH_KEYMGMT_ELEM(ed, DUP, dup),
     DISPATCH_KEYMGMT_ELEM(kmgmt, HAS, has),
     DISPATCH_KEYMGMT_ELEM(ed, MATCH, match),
     DISPATCH_KEYMGMT_ELEM(ed, IMPORT, import),
@@ -1450,6 +1456,7 @@ const OSSL_DISPATCH p11prov_ed448_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(ed, GEN_SETTABLE_PARAMS, gen_settable_params),
     DISPATCH_KEYMGMT_ELEM(ed, LOAD, load),
     DISPATCH_KEYMGMT_ELEM(kmgmt, FREE, free),
+    DISPATCH_KEYMGMT_ELEM(ed, DUP, dup),
     DISPATCH_KEYMGMT_ELEM(kmgmt, HAS, has),
     DISPATCH_KEYMGMT_ELEM(ed, MATCH, match),
     DISPATCH_KEYMGMT_ELEM(ed, IMPORT, import),
@@ -1896,6 +1903,8 @@ static const OSSL_PARAM *p11prov_ecx_gettable_params(void *provctx)
     return params;
 }
 
+DEFINE_KEYMGMT_DUP(x25519, ecx)
+
 const OSSL_DISPATCH p11prov_x25519_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(x25519, NEW, new),
     DISPATCH_KEYMGMT_ELEM(x25519, GEN_INIT, gen_init),
@@ -1905,6 +1914,7 @@ const OSSL_DISPATCH p11prov_x25519_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(ed, GEN_SETTABLE_PARAMS, gen_settable_params),
     DISPATCH_KEYMGMT_ELEM(ecx, LOAD, load),
     DISPATCH_KEYMGMT_ELEM(kmgmt, FREE, free),
+    DISPATCH_KEYMGMT_ELEM(x25519, DUP, dup),
     DISPATCH_KEYMGMT_ELEM(kmgmt, HAS, has),
     DISPATCH_KEYMGMT_ELEM(ecx, MATCH, match),
     DISPATCH_KEYMGMT_ELEM(ecx, IMPORT, import),
@@ -1919,6 +1929,8 @@ const OSSL_DISPATCH p11prov_x25519_keymgmt_functions[] = {
     { 0, NULL },
 };
 
+DEFINE_KEYMGMT_DUP(x448, ecx)
+
 const OSSL_DISPATCH p11prov_x448_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(x448, NEW, new),
     DISPATCH_KEYMGMT_ELEM(x448, GEN_INIT, gen_init),
@@ -1928,6 +1940,7 @@ const OSSL_DISPATCH p11prov_x448_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(ed, GEN_SETTABLE_PARAMS, gen_settable_params),
     DISPATCH_KEYMGMT_ELEM(ecx, LOAD, load),
     DISPATCH_KEYMGMT_ELEM(kmgmt, FREE, free),
+    DISPATCH_KEYMGMT_ELEM(x448, DUP, dup),
     DISPATCH_KEYMGMT_ELEM(kmgmt, HAS, has),
     DISPATCH_KEYMGMT_ELEM(ecx, MATCH, match),
     DISPATCH_KEYMGMT_ELEM(ecx, IMPORT, import),

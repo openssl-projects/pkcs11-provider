@@ -105,6 +105,7 @@ test_programs = {
   'tdigest_dupctx': ['tdigest_dupctx.c'],
   'treadkeys': ['treadkeys.c'],
   'tcmpkeys': ['tcmpkeys.c', 'util.c'],
+  'tdupkey': ['tdupkey.c', 'util.c'],
   'tecpubparams': ['tecpubparams.c', 'util.c'],
   'tcachekeys': ['tcachekeys.c', 'util.c'],
   'tfork': ['tfork.c', 'util.c'],

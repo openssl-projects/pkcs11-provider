@@ -94,6 +94,9 @@ if [[ "${SUPPORT_EDDSA_PARAMS}" = "1" ]]; then
     OPENSSL_CONF=${ORIG_OPENSSL_CONF}
 fi
 
+title PARA "Duplicate the key"
+$CHECKER "${TESTBLDDIR}/tdupkey" "$EDPRIURI" "$EDPUBURI"
+
 title PARA "Test CSR generation from private ED25519 keys"
 ossl '
 req -new -batch -key "${EDPRIURI}" -out ${TMPPDIR}/ed25519_csr.pem'

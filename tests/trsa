@@ -38,6 +38,9 @@ fi
 # that is bigger than a hash, which means we'd need a very small RSA key
 # to really check a raw signature through pkeyutl
 
+title PARA "Duplicate the key"
+$CHECKER "${TESTBLDDIR}/tdupkey" "$PRIURI" "$PUBURI"
+
 title PARA "Sign and Verify with provided Hash and RSA"
 ossl 'dgst -sha256 -binary -out ${TMPPDIR}/sha256.bin ${SEEDFILE}'
 ossl '

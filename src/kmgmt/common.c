@@ -481,6 +481,60 @@ int p11prov_kmgmt_has(const void *keydata, int selection)
     return RET_OSSL_OK;
 }
 
+struct kmgmt_dup_import {
+    void *key;
+    int selection;
+    OSSL_FUNC_keymgmt_import_fn *import_fn;
+};
+
+static int kmgmt_dup_import_cb(const OSSL_PARAM params[], void *arg)
+{
+    struct kmgmt_dup_import *dup = (struct kmgmt_dup_import *)arg;
+
+    /* key types without parameters export nothing, the new key is it */
+    if (params == NULL || params[0].key == NULL) {
+        return RET_OSSL_OK;
+    }
+
+    return dup->import_fn(dup->key, dup->selection, params);
+}
+
+void *p11prov_kmgmt_dup(const void *keydata, int selection,
+                        OSSL_FUNC_keymgmt_new_fn *new_fn,
+                        OSSL_FUNC_keymgmt_import_fn *import_fn)
+{
+    P11PROV_OBJ *key = (P11PROV_OBJ *)keydata;
+    CK_OBJECT_CLASS class = p11prov_obj_get_class(key);
+    struct kmgmt_dup_import dup = {
+        .selection = selection,
+        .import_fn = import_fn,
+    };
+
+    P11PROV_debug("key %p dup (selection: %d)", key, selection);
+
+    /* Key objects are not modified once they reference a key on the token,
+     * so a full copy can share the object. */
+    if ((class == CKO_PRIVATE_KEY
+         && (selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY))
+        || (class == CKO_PUBLIC_KEY
+            && (selection & OSSL_KEYMGMT_SELECT_PUBLIC_KEY))) {
+        return p11prov_obj_ref(key);
+    }
+
+    /* A copy of less than the key (EVP_PKEY_copy_parameters() for instance)
+     * must not carry the private key along. */
+    dup.key = new_fn(p11prov_obj_get_prov_ctx(key));
+    if (dup.key == NULL) {
+        return NULL;
+    }
+    if (p11prov_kmgmt_export(key, selection, kmgmt_dup_import_cb, &dup)
+        != RET_OSSL_OK) {
+        p11prov_kmgmt_free(dup.key);
+        return NULL;
+    }
+    return dup.key;
+}
+
 int p11prov_kmgmt_import(CK_KEY_TYPE type, CK_ULONG param_set,
                          const char *priv_param_name, void *keydata,
                          int selection, const OSSL_PARAM params[])

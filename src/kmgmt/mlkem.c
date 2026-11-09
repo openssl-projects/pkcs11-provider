@@ -508,6 +508,8 @@ static const OSSL_PARAM *p11prov_mlkem_gettable_params(void *provctx)
     return params;
 }
 
+DEFINE_KEYMGMT_DUP(mlkem_512, mlkem)
+
 const OSSL_DISPATCH p11prov_mlkem512_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(mlkem_512, NEW, new),
     DISPATCH_KEYMGMT_ELEM(mlkem_512, GEN_INIT, gen_init),
@@ -517,6 +519,7 @@ const OSSL_DISPATCH p11prov_mlkem512_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(mlkem, GEN_SETTABLE_PARAMS, gen_settable_params),
     DISPATCH_KEYMGMT_ELEM(mlkem, LOAD, load),
     DISPATCH_KEYMGMT_ELEM(kmgmt, FREE, free),
+    DISPATCH_KEYMGMT_ELEM(mlkem_512, DUP, dup),
     DISPATCH_KEYMGMT_ELEM(kmgmt, HAS, has),
     DISPATCH_KEYMGMT_ELEM(mlkem, MATCH, match),
     DISPATCH_KEYMGMT_ELEM(mlkem, IMPORT, import),
@@ -527,6 +530,8 @@ const OSSL_DISPATCH p11prov_mlkem512_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(mlkem, GETTABLE_PARAMS, gettable_params),
     { 0, NULL },
 };
+
+DEFINE_KEYMGMT_DUP(mlkem_768, mlkem)
 
 const OSSL_DISPATCH p11prov_mlkem768_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(mlkem_768, NEW, new),
@@ -537,6 +542,7 @@ const OSSL_DISPATCH p11prov_mlkem768_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(mlkem, GEN_SETTABLE_PARAMS, gen_settable_params),
     DISPATCH_KEYMGMT_ELEM(mlkem, LOAD, load),
     DISPATCH_KEYMGMT_ELEM(kmgmt, FREE, free),
+    DISPATCH_KEYMGMT_ELEM(mlkem_768, DUP, dup),
     DISPATCH_KEYMGMT_ELEM(kmgmt, HAS, has),
     DISPATCH_KEYMGMT_ELEM(mlkem, MATCH, match),
     DISPATCH_KEYMGMT_ELEM(mlkem, IMPORT, import),
@@ -548,6 +554,8 @@ const OSSL_DISPATCH p11prov_mlkem768_keymgmt_functions[] = {
     { 0, NULL },
 };
 
+DEFINE_KEYMGMT_DUP(mlkem_1024, mlkem)
+
 const OSSL_DISPATCH p11prov_mlkem1024_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(mlkem_1024, NEW, new),
     DISPATCH_KEYMGMT_ELEM(mlkem_1024, GEN_INIT, gen_init),
@@ -557,6 +565,7 @@ const OSSL_DISPATCH p11prov_mlkem1024_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(mlkem, GEN_SETTABLE_PARAMS, gen_settable_params),
     DISPATCH_KEYMGMT_ELEM(mlkem, LOAD, load),
     DISPATCH_KEYMGMT_ELEM(kmgmt, FREE, free),
+    DISPATCH_KEYMGMT_ELEM(mlkem_1024, DUP, dup),
     DISPATCH_KEYMGMT_ELEM(kmgmt, HAS, has),
     DISPATCH_KEYMGMT_ELEM(mlkem, MATCH, match),
     DISPATCH_KEYMGMT_ELEM(mlkem, IMPORT, import),
