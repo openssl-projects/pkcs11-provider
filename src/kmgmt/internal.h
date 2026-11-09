@@ -90,12 +90,22 @@ void *p11prov_kmgmt_new(void *provctx, CK_KEY_TYPE type);
 void p11prov_kmgmt_free(void *key);
 void *p11prov_kmgmt_load(const void *ref, size_t ref_sz, CK_KEY_TYPE type);
 int p11prov_kmgmt_has(const void *keydata, int selection);
+void *p11prov_kmgmt_dup(const void *keydata, int selection,
+                        OSSL_FUNC_keymgmt_new_fn *new_fn,
+                        OSSL_FUNC_keymgmt_import_fn *import_fn);
 
 int p11prov_kmgmt_import(CK_KEY_TYPE type, CK_ULONG param_set,
                          const char *priv_param_name, void *keydata,
                          int selection, const OSSL_PARAM params[]);
 int p11prov_kmgmt_export(void *keydata, int selection, OSSL_CALLBACK *cb_fn,
                          void *cb_arg);
+
+#define DEFINE_KEYMGMT_DUP(type, import_type) \
+    static void *p11prov_##type##_dup(const void *keydata, int selection) \
+    { \
+        return p11prov_kmgmt_dup(keydata, selection, p11prov_##type##_new, \
+                                 p11prov_##import_type##_import); \
+    }
 
 #define DISPATCH_KEYMGMT_FN(type, name) \
     DECL_DISPATCH_FUNC(keymgmt, p11prov_##type, name)

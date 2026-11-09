@@ -678,6 +678,8 @@ static const OSSL_PARAM *p11prov_rsa_gettable_params(void *provctx)
     return params;
 }
 
+DEFINE_KEYMGMT_DUP(rsa, rsa)
+
 const OSSL_DISPATCH p11prov_rsa_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(rsa, NEW, new),
     DISPATCH_KEYMGMT_ELEM(rsa, GEN_CLEANUP, gen_cleanup),
@@ -686,6 +688,7 @@ const OSSL_DISPATCH p11prov_rsa_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(rsa, GEN_SET_PARAMS, gen_set_params),
     DISPATCH_KEYMGMT_ELEM(rsa, GEN, gen),
     DISPATCH_KEYMGMT_ELEM(kmgmt, FREE, free),
+    DISPATCH_KEYMGMT_ELEM(rsa, DUP, dup),
     DISPATCH_KEYMGMT_ELEM(rsa, LOAD, load),
     DISPATCH_KEYMGMT_ELEM(kmgmt, HAS, has),
     DISPATCH_KEYMGMT_ELEM(rsa, MATCH, match),
@@ -924,6 +927,7 @@ const OSSL_DISPATCH p11prov_rsapss_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(rsa, GEN_CLEANUP, gen_cleanup),
     DISPATCH_KEYMGMT_ELEM(rsa, LOAD, load),
     DISPATCH_KEYMGMT_ELEM(kmgmt, FREE, free),
+    DISPATCH_KEYMGMT_ELEM(rsa, DUP, dup),
     DISPATCH_KEYMGMT_ELEM(kmgmt, HAS, has),
     DISPATCH_KEYMGMT_ELEM(rsa, MATCH, match),
     DISPATCH_KEYMGMT_ELEM(rsa, IMPORT, import),

@@ -527,6 +527,8 @@ static const OSSL_PARAM *p11prov_mldsa_gettable_params(void *provctx)
 #define p11prov_mldsa_has p11prov_kmgmt_has
 #define p11prov_mldsa_export p11prov_kmgmt_export
 
+DEFINE_KEYMGMT_DUP(mldsa_44, mldsa)
+
 const OSSL_DISPATCH p11prov_mldsa44_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(mldsa_44, NEW, new),
     DISPATCH_KEYMGMT_ELEM(mldsa_44, GEN_INIT, gen_init),
@@ -536,6 +538,7 @@ const OSSL_DISPATCH p11prov_mldsa44_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(mldsa, GEN_SETTABLE_PARAMS, gen_settable_params),
     DISPATCH_KEYMGMT_ELEM(mldsa, LOAD, load),
     DISPATCH_KEYMGMT_ELEM(kmgmt, FREE, free),
+    DISPATCH_KEYMGMT_ELEM(mldsa_44, DUP, dup),
     DISPATCH_KEYMGMT_ELEM(kmgmt, HAS, has),
     DISPATCH_KEYMGMT_ELEM(mldsa, MATCH, match),
     DISPATCH_KEYMGMT_ELEM(mldsa, IMPORT, import),
@@ -546,6 +549,8 @@ const OSSL_DISPATCH p11prov_mldsa44_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(mldsa, GETTABLE_PARAMS, gettable_params),
     { 0, NULL },
 };
+
+DEFINE_KEYMGMT_DUP(mldsa_65, mldsa)
 
 const OSSL_DISPATCH p11prov_mldsa65_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(mldsa_65, NEW, new),
@@ -556,6 +561,7 @@ const OSSL_DISPATCH p11prov_mldsa65_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(mldsa, GEN_SETTABLE_PARAMS, gen_settable_params),
     DISPATCH_KEYMGMT_ELEM(mldsa, LOAD, load),
     DISPATCH_KEYMGMT_ELEM(kmgmt, FREE, free),
+    DISPATCH_KEYMGMT_ELEM(mldsa_65, DUP, dup),
     DISPATCH_KEYMGMT_ELEM(kmgmt, HAS, has),
     DISPATCH_KEYMGMT_ELEM(mldsa, MATCH, match),
     DISPATCH_KEYMGMT_ELEM(mldsa, IMPORT, import),
@@ -567,6 +573,8 @@ const OSSL_DISPATCH p11prov_mldsa65_keymgmt_functions[] = {
     { 0, NULL },
 };
 
+DEFINE_KEYMGMT_DUP(mldsa_87, mldsa)
+
 const OSSL_DISPATCH p11prov_mldsa87_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(mldsa_87, NEW, new),
     DISPATCH_KEYMGMT_ELEM(mldsa_87, GEN_INIT, gen_init),
@@ -576,6 +584,7 @@ const OSSL_DISPATCH p11prov_mldsa87_keymgmt_functions[] = {
     DISPATCH_KEYMGMT_ELEM(mldsa, GEN_SETTABLE_PARAMS, gen_settable_params),
     DISPATCH_KEYMGMT_ELEM(mldsa, LOAD, load),
     DISPATCH_KEYMGMT_ELEM(kmgmt, FREE, free),
+    DISPATCH_KEYMGMT_ELEM(mldsa_87, DUP, dup),
     DISPATCH_KEYMGMT_ELEM(kmgmt, HAS, has),
     DISPATCH_KEYMGMT_ELEM(mldsa, MATCH, match),
     DISPATCH_KEYMGMT_ELEM(mldsa, IMPORT, import),

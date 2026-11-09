@@ -597,6 +597,7 @@ static const OSSL_PARAM *p11prov_slhdsa_gettable_params(void *provctx)
 #define p11prov_slhdsa_export p11prov_kmgmt_export
 
 #define SLHDSA_KEYMGMT_FUNCTIONS(name) \
+    DEFINE_KEYMGMT_DUP(slhdsa_##name, slhdsa) \
     const OSSL_DISPATCH p11prov_slhdsa_##name##_keymgmt_functions[] = { \
         DISPATCH_KEYMGMT_ELEM(slhdsa_##name, NEW, new), \
         DISPATCH_KEYMGMT_ELEM(slhdsa_##name, GEN_INIT, gen_init), \
@@ -607,6 +608,7 @@ static const OSSL_PARAM *p11prov_slhdsa_gettable_params(void *provctx)
                               gen_settable_params), \
         DISPATCH_KEYMGMT_ELEM(slhdsa, LOAD, load), \
         DISPATCH_KEYMGMT_ELEM(kmgmt, FREE, free), \
+        DISPATCH_KEYMGMT_ELEM(slhdsa_##name, DUP, dup), \
         DISPATCH_KEYMGMT_ELEM(kmgmt, HAS, has), \
         DISPATCH_KEYMGMT_ELEM(slhdsa, MATCH, match), \
         DISPATCH_KEYMGMT_ELEM(slhdsa, IMPORT, import), \
