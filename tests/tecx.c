@@ -133,6 +133,21 @@ static void ecdh_outlen_test(EVP_PKEY *a, EVP_PKEY *b)
         goto done;
     }
 
+    /* A shorter buffer gets the leading bytes, as with the default provider */
+    if (EVP_PKEY_is_a(a, "EC")) {
+        size_t shortlen = secretlen / 2;
+
+        if (EVP_PKEY_derive(derivectx, bigsecret, &shortlen) != 1) {
+            fprintf(stderr, "EVP_PKEY_derive with shorter buffer failed!\n");
+            goto done;
+        }
+        if (shortlen != secretlen / 2
+            || memcmp(secret, bigsecret, shortlen) != 0) {
+            fprintf(stderr, "Secret truncated to the wrong bytes!\n");
+            goto done;
+        }
+    }
+
     ok = true;
 
 done:
