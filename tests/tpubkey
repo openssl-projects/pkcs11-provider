@@ -70,4 +70,14 @@ if [ -n "$ECBASE2URI" ]; then
     diff "${TMPPDIR}/ec-base-cert.pub" "${TMPPDIR}/ec-priv-cert.pub"
 fi
 
+if [ -n "$EDBASE2URI" ]; then
+    title PARA "Check we can get ED25519 public keys from certificate objects"
+
+    title LINE "Export Public ED25519 key to a file (priv-uri)"
+    ossl 'pkey -in $EDPRI2URI -pubout -out ${TMPPDIR}/ed-priv-cert.pub'
+    title LINE "Export Public key to a file (base-uri)"
+    ossl 'pkey -in $EDBASE2URI -pubout -out ${TMPPDIR}/ed-base-cert.pub'
+    diff "${TMPPDIR}/ed-base-cert.pub" "${TMPPDIR}/ed-priv-cert.pub"
+fi
+
 exit 0
