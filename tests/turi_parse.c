@@ -18,6 +18,9 @@ int main(void)
         "pkcs11:token=The%20Token;id=%01%02%03%04;pin-value=1234",
         "pkcs11:slot-id=1;library-version=2.20",
         "pkcs11:token=foo/bar",
+        /* RFC 3986 3.1: schemes are case-insensitive */
+        "PKCS11:object=my-cert;type=cert",
+        "PkCs11:token=Token",
         NULL,
     };
 

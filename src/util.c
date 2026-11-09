@@ -704,7 +704,7 @@ P11PROV_URI *p11prov_parse_uri(P11PROV_CTX *ctx, const char *uri)
 
     P11PROV_debug("ctx=%p uri=%s)", ctx, uri);
 
-    if (strncmp(uri, "pkcs11:", 7) != 0) {
+    if (OPENSSL_strncasecmp(uri, "pkcs11:", 7) != 0) {
         return NULL;
     }
 
