@@ -53,6 +53,8 @@ ossl 'pkey -in $ECBASEURIWITHPINVALUE -pubin -pubout -out ${TMPPDIR}/ec.pub.urip
 [[ -n $ED2BASEURIWITHPINVALUE ]] && ossl 'pkey -in $ED2BASEURIWITHPINVALUE -pubin -pubout -out ${TMPPDIR}/ed2.pub.uripin.pem'
 
 title PARA "Test fetching public keys with a PIN source in URI"
+title LINE "Load a private key with a pin-source without the file: prefix"
+ossl 'pkey -in "${PRIURI}?pin-source=${TMPPDIR}/pinfile.txt" -pubout -out ${TMPPDIR}/rsa.pub.pinsourcepath.pem'
 ossl 'pkey -in $BASEURIWITHPINSOURCE -pubin -pubout -out ${TMPPDIR}/rsa.pub.uripinsource.pem'
 ossl 'pkey -in $ECBASEURIWITHPINSOURCE -pubin -pubout -out ${TMPPDIR}/ec.pub.uripinsource.pem'
 [[ -n $ECXBASEURIWITHPINSOURCE ]] && ossl 'pkey -in $ECXBASEURIWITHPINSOURCE -pubin -pubout -out ${TMPPDIR}/ecx.pub.uripinsource.pem'

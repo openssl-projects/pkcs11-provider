@@ -334,6 +334,8 @@ Examples:
 
 PINs can also be provided in PKCS#11 URIs via environment variables using the `env:` schema (e.g., `pin-source=env:VARIABLE_NAME`).
 
+A `pin-source` value with neither the `file:` nor the `env:` prefix is the path of a file holding the PIN.
+
 
 USE IN OLDER APPLICATIONS (URIs in PEM files)
 =============================================
