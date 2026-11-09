@@ -27,6 +27,8 @@ oaep_roundtrip() {
 
 oaep_cases=(
     "RSA basic encrypt and decrypt:-pkeyopt digest:sha256 -pkeyopt mgf1-digest:sha256"
+    "Only the OAEP digest set:-pkeyopt digest:sha256"
+    "No OAEP parameters set:"
 )
 
 ORIG_OPENSSL_CONF=${OPENSSL_CONF}

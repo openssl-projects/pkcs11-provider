@@ -38,6 +38,8 @@ struct p11prov_rsaenc_ctx {
 
     CK_MECHANISM_TYPE mechtype;
     CK_RSA_PKCS_OAEP_PARAMS oaep_params;
+    /* MGF1 follows the OAEP digest unless the caller set it */
+    bool mgf_explicit;
 
     /* RSA_PKCS1_WITH_TLS_PADDING parameters */
     struct tls_padding tls_padding;
@@ -57,6 +59,10 @@ static void *p11prov_rsaenc_newctx(void *provctx)
 
     /* PKCS1.5 is the default */
     encctx->mechtype = CKM_RSA_PKCS;
+
+    /* Same OAEP defaults as OpenSSL */
+    encctx->oaep_params.hashAlg = CKM_SHA_1;
+    encctx->oaep_params.mgf = CKG_MGF1_SHA1;
 
     return encctx;
 }
@@ -91,6 +97,7 @@ static void *p11prov_rsaenc_dupctx(void *ctx)
     newctx->key = p11prov_obj_ref(encctx->key);
     newctx->mechtype = encctx->mechtype;
     newctx->oaep_params = encctx->oaep_params;
+    newctx->mgf_explicit = encctx->mgf_explicit;
     if (encctx->oaep_params.pSourceData) {
         CK_RSA_PKCS_OAEP_PARAMS_PTR src = &encctx->oaep_params;
         CK_RSA_PKCS_OAEP_PARAMS_PTR dst = &newctx->oaep_params;
@@ -117,6 +124,12 @@ static int p11prov_rsaenc_set_mechanism(void *ctx, CK_MECHANISM *mechanism)
 
     if (mechanism->mechanism == CKM_RSA_PKCS_OAEP) {
         encctx->oaep_params.source = CKZ_DATA_SPECIFIED;
+        /* the digest has no MGF1 and none was set explicitly */
+        if (encctx->oaep_params.mgf == CK_UNAVAILABLE_INFORMATION) {
+            P11PROV_raise(encctx->provctx, CKR_MECHANISM_PARAM_INVALID,
+                          "No valid MGF1 algorithm configured for OAEP");
+            return CKR_MECHANISM_PARAM_INVALID;
+        }
         mechanism->pParameter = &encctx->oaep_params;
         mechanism->ulParameterLen = sizeof(encctx->oaep_params);
     }
@@ -476,6 +489,17 @@ static const char *p11prov_rsaenc_mgf_name(CK_RSA_PKCS_MGF_TYPE mgf)
     return NULL;
 }
 
+static CK_RSA_PKCS_MGF_TYPE
+p11prov_rsaenc_digest_to_mgf(CK_MECHANISM_TYPE digest)
+{
+    for (int i = 0; mfg_map[i].digest != CK_UNAVAILABLE_INFORMATION; i++) {
+        if (mfg_map[i].digest == digest) {
+            return mfg_map[i].mgf;
+        }
+    }
+    return CK_UNAVAILABLE_INFORMATION;
+}
+
 static CK_RSA_PKCS_MGF_TYPE p11prov_rsaenc_map_mgf(const char *digest_name)
 {
     CK_MECHANISM_TYPE digest;
@@ -486,12 +510,7 @@ static CK_RSA_PKCS_MGF_TYPE p11prov_rsaenc_map_mgf(const char *digest_name)
         return CK_UNAVAILABLE_INFORMATION;
     }
 
-    for (int i = 0; mfg_map[i].digest != CK_UNAVAILABLE_INFORMATION; i++) {
-        if (mfg_map[i].digest == digest) {
-            return mfg_map[i].mgf;
-        }
-    }
-    return CK_UNAVAILABLE_INFORMATION;
+    return p11prov_rsaenc_digest_to_mgf(digest);
 }
 
 static int p11prov_rsaenc_get_ctx_params(void *ctx, OSSL_PARAM *params)
@@ -658,21 +677,28 @@ static int p11prov_rsaenc_set_ctx_params(void *ctx, const OSSL_PARAM params[])
             ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_DIGEST);
             return RET_OSSL_ERR;
         }
+        if (!encctx->mgf_explicit) {
+            encctx->oaep_params.mgf =
+                p11prov_rsaenc_digest_to_mgf(encctx->oaep_params.hashAlg);
+        }
     }
 
     p = OSSL_PARAM_locate_const(params, OSSL_ASYM_CIPHER_PARAM_MGF1_DIGEST);
     if (p) {
+        CK_RSA_PKCS_MGF_TYPE mgf;
         const char *digest = NULL;
         ret = OSSL_PARAM_get_utf8_string_ptr(p, &digest);
         if (ret != RET_OSSL_OK) {
             return ret;
         }
 
-        encctx->oaep_params.mgf = p11prov_rsaenc_map_mgf(digest);
-        if (encctx->oaep_params.mgf == CK_UNAVAILABLE_INFORMATION) {
+        mgf = p11prov_rsaenc_map_mgf(digest);
+        if (mgf == CK_UNAVAILABLE_INFORMATION) {
             ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_MGF1_MD);
             return RET_OSSL_ERR;
         }
+        encctx->oaep_params.mgf = mgf;
+        encctx->mgf_explicit = true;
     }
 
     p = OSSL_PARAM_locate_const(params, OSSL_ASYM_CIPHER_PARAM_OAEP_LABEL);
