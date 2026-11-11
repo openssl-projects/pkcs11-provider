@@ -108,6 +108,7 @@ test_programs = {
   'tecpubparams': ['tecpubparams.c', 'util.c'],
   'tcachekeys': ['tcachekeys.c', 'util.c'],
   'tfork': ['tfork.c', 'util.c'],
+  'tdeverror': ['tdeverror.c', 'util.c'],
   'tforkslot': ['tforkslot.c', 'util.c'],
   'tstorepubkey': ['tstorepubkey.c', 'util.c'],
   'tstorepubkeyfree': ['tstorepubkeyfree.c', 'util.c'],
@@ -131,6 +132,17 @@ foreach t, sources : test_programs
                  dependencies: [libcrypto, libssl])
   test_executables += [t]
 endforeach
+
+p11shim = shared_library(
+  'p11shim',
+  'p11shim.c',
+  name_prefix: '',
+  build_by_default: false,
+  include_directories: [include_directories('../src')],
+  dependencies: [dl_dep],
+)
+test_executables += [p11shim]
+test_env.set('P11SHIM', p11shim.full_path())
 
 ec_point_test = executable(
   'tecpoint',
@@ -184,6 +196,7 @@ tests = {
   'democa': {'suites': all_suites, 'is_parallel': false},
   'digest': {'suites': all_suites},
   'fork': {'suites': all_suites},
+  'deviceerror': {'suites': ['softhsm', 'kryoptic', 'kryoptic.nss']},
   'oaepsha2': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss']},
   'hkdf': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss']},
   'hkdfextract': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss']},

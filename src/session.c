@@ -234,6 +234,35 @@ void p11prov_session_pool_fork_reset(P11PROV_SESSION_POOL *pool)
     }
 }
 
+void p11prov_session_pool_reset(P11PROV_SESSION_POOL *pool)
+{
+    P11PROV_debug("Invalidating sessions in pool %p", pool);
+
+    if (!pool) {
+        return;
+    }
+
+    if (MUTEX_LOCK(pool) == CKR_OK) {
+        /* LOCKED SECTION ------------- */
+        for (CK_ULONG i = 0; i < pool->num_sessions; i++) {
+            P11PROV_SESSION *session = pool->sessions[i];
+
+            session->session = CK_INVALID_HANDLE;
+            session->flags = DEFLT_SESSION_FLAGS;
+            session->state = CK_UNAVAILABLE_INFORMATION;
+            session->is_broken = false;
+            if (session->is_login) {
+                p11prov_session_deref(session);
+                session->is_login = false;
+            }
+        }
+        (void)MUTEX_UNLOCK(pool);
+        /* ------------- LOCKED SECTION */
+    } else {
+        P11PROV_debug("Failed to invalidate sessions in pool");
+    }
+}
+
 static CK_RV session_new_bare(P11PROV_SESSION_POOL *pool,
                               P11PROV_SESSION **_session)
 {
