@@ -409,7 +409,6 @@ void p11prov_module_free(P11PROV_MODULE *mctx)
     OPENSSL_free(mctx);
 }
 
-/* should only be called by the fork handler */
 void p11prov_module_mark_reinit(P11PROV_MODULE *mctx)
 {
     mctx->reinit = true;
@@ -489,7 +488,10 @@ CK_RV p11prov_module_reinit(P11PROV_CTX *ctx)
 
     p11prov_ctx_set_status(ctx, P11PROV_INITIALIZED);
 done:
-    if (ret != CKR_OK) {
+    if (ret == CKR_DEVICE_ERROR && p11prov_ctx_reinit_on_device_error(ctx)) {
+        /* device still unavailable, retry on next use */
+        p11prov_ctx_set_status(ctx, P11PROV_NEEDS_RESET);
+    } else if (ret != CKR_OK) {
         p11prov_ctx_set_status(ctx, P11PROV_IN_ERROR);
     }
     return ret;

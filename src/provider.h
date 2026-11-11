@@ -72,6 +72,7 @@ enum p11prov_ctx_status {
     P11PROV_OPS_NEEDS_INIT,
     P11PROV_INITIALIZED,
     P11PROV_NEEDS_REINIT,
+    P11PROV_NEEDS_RESET,
     P11PROV_NO_DEINIT,
     P11PROV_IN_ERROR,
 };
@@ -82,6 +83,8 @@ void p11prov_ctx_set_status(P11PROV_CTX *ctx, enum p11prov_ctx_status status);
 CK_UTF8CHAR_PTR p11prov_ctx_pin(P11PROV_CTX *ctx);
 OSSL_LIB_CTX *p11prov_ctx_get_libctx(P11PROV_CTX *ctx);
 CK_RV p11prov_ctx_status(P11PROV_CTX *ctx);
+bool p11prov_ctx_needs_reset(P11PROV_CTX *ctx);
+void p11prov_ctx_check_device_error(P11PROV_CTX *ctx, CK_RV rv);
 CK_SLOT_ID p11prov_ctx_get_default_slotid(P11PROV_CTX *ctx);
 P11PROV_SLOTS_CTX *p11prov_ctx_get_slots(P11PROV_CTX *ctx);
 void p11prov_ctx_set_slots(P11PROV_CTX *ctx, P11PROV_SLOTS_CTX *slots);
@@ -118,6 +121,7 @@ int p11prov_ctx_cache_sessions(P11PROV_CTX *ctx);
 
 bool p11prov_ctx_is_call_blocked(P11PROV_CTX *ctx, uint64_t mask);
 bool p11prov_ctx_no_session_callbacks(P11PROV_CTX *ctx);
+bool p11prov_ctx_reinit_on_device_error(P11PROV_CTX *ctx);
 
 CK_INFO p11prov_ctx_get_ck_info(P11PROV_CTX *ctx);
 CK_RV p11prov_ctx_add_algs(P11PROV_CTX *ctx, int operation_id,
