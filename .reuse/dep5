@@ -39,6 +39,7 @@ Files: .github/*
        scripts/coverage_report.sh
        scripts/coverage/*
        .lcovrc
+       .editorconfig
 Copyright: (C) 2022 - 2026 Simo Sorce <simo@redhat.com>
 License: Apache-2.0
 
