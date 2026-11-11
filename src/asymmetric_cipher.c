@@ -464,7 +464,7 @@ static const struct {
 static const struct {
     CK_MECHANISM_TYPE digest;
     CK_RSA_PKCS_MGF_TYPE mgf;
-} mfg_map[] = {
+} mgf_map[] = {
     { CKM_SHA3_512, CKG_MGF1_SHA3_512 }, { CKM_SHA3_384, CKG_MGF1_SHA3_384 },
     { CKM_SHA3_256, CKG_MGF1_SHA3_256 }, { CKM_SHA3_224, CKG_MGF1_SHA3_224 },
     { CKM_SHA512, CKG_MGF1_SHA512 },     { CKM_SHA384, CKG_MGF1_SHA384 },
@@ -474,12 +474,12 @@ static const struct {
 
 static const char *p11prov_rsaenc_mgf_name(CK_RSA_PKCS_MGF_TYPE mgf)
 {
-    for (int i = 0; mfg_map[i].digest != CK_UNAVAILABLE_INFORMATION; i++) {
-        if (mfg_map[i].mgf == mgf) {
+    for (int i = 0; mgf_map[i].digest != CK_UNAVAILABLE_INFORMATION; i++) {
+        if (mgf_map[i].mgf == mgf) {
             const char *name;
             CK_RV rv;
 
-            rv = p11prov_digest_get_name(mfg_map[i].digest, &name);
+            rv = p11prov_digest_get_name(mgf_map[i].digest, &name);
             if (rv != CKR_OK) {
                 return NULL;
             }
@@ -492,9 +492,9 @@ static const char *p11prov_rsaenc_mgf_name(CK_RSA_PKCS_MGF_TYPE mgf)
 static CK_RSA_PKCS_MGF_TYPE
 p11prov_rsaenc_digest_to_mgf(CK_MECHANISM_TYPE digest)
 {
-    for (int i = 0; mfg_map[i].digest != CK_UNAVAILABLE_INFORMATION; i++) {
-        if (mfg_map[i].digest == digest) {
-            return mfg_map[i].mgf;
+    for (int i = 0; mgf_map[i].digest != CK_UNAVAILABLE_INFORMATION; i++) {
+        if (mgf_map[i].digest == digest) {
+            return mgf_map[i].mgf;
         }
     }
     return CK_UNAVAILABLE_INFORMATION;
