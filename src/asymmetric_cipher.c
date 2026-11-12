@@ -433,7 +433,7 @@ done:
     return result;
 }
 
-static struct {
+static const struct {
     CK_MECHANISM_TYPE type;
     int ossl_id;
     const char *string;
@@ -448,7 +448,7 @@ static struct {
 };
 
 /* only the ones we can support */
-static struct {
+static const struct {
     CK_MECHANISM_TYPE digest;
     CK_RSA_PKCS_MGF_TYPE mgf;
 } mfg_map[] = {

@@ -1302,7 +1302,7 @@ enum p11prov_cfg_enum {
     P11PROV_CFG_SIZE,
 };
 
-static struct p11prov_cfg_names {
+static const struct p11prov_cfg_names {
     const char *name;
 } p11prov_cfg_names[P11PROV_CFG_SIZE] = {
     { "pkcs11-module-path" },

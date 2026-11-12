@@ -1543,7 +1543,7 @@ void p11prov_set_attr_bool(CK_ATTRIBUTE *tmpl, CK_ATTRIBUTE_TYPE type, bool v)
 CK_RV p11prov_usage_to_template(CK_ATTRIBUTE *tmpl, size_t *size, size_t max,
                                 CK_FLAGS usage)
 {
-    static struct flag_to_attr {
+    static const struct flag_to_attr {
         CK_FLAGS flag;
         CK_ATTRIBUTE_TYPE type;
     } flag_to_attr[] = {
