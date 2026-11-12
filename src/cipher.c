@@ -140,7 +140,7 @@ static const OSSL_PARAM *p11prov_cipher_gettable_params(void *provctx)
     return cipher_gettable_params;
 }
 
-static struct {
+static const struct {
     const char *name;
     int flag;
 } param_to_flag[] = {

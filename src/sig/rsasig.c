@@ -124,7 +124,7 @@ DEFINE_DER_SEQ_SHA3(224, 0x0D, 0x07);
         .der_rsa_pss_params_len = sizeof(der_rsa_pss_params_sha3_##bits), \
     }
 
-struct rsasig_data {
+static const struct rsasig_data {
     CK_MECHANISM_TYPE digest;
     CK_MECHANISM_TYPE pkcs_mech;
     CK_MECHANISM_TYPE pkcs_pss;
@@ -839,7 +839,7 @@ static int p11prov_rsasig_verify_message_final(void *ctx)
 }
 #endif /* OSSL_FUNC_SIGNATURE_SIGN_MESSAGE_INIT */
 
-static struct {
+static const struct {
     CK_MECHANISM_TYPE type;
     int ossl_id;
     const char *string;
