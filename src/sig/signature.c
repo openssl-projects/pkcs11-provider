@@ -437,6 +437,17 @@ static CK_RV p11prov_sig_operate_init(P11PROV_SIG_CTX *sigctx, bool digest_op,
         }
         if (ret == CKR_OK) {
             sigctx->session_state = SESS_INITIALIZED;
+        } else if (ret == CKR_MECHANISM_INVALID && digest_op
+                   && sigctx->mechanism.mechanism != sigctx->mechtype) {
+            /* The token lists the hash+sign mechanism, but refuses it for
+             * this key (e.g. not in CKA_ALLOWED_MECHANISMS, or the token
+             * cannot do the hash). Hash in software and use the raw
+             * mechanism instead, same as when the mechanism is not
+             * listed at all. */
+            p11prov_return_session(session);
+            session = NULL;
+            ret = mech_fallback_init(sigctx, slotid);
+            goto done;
         }
         break;
     case CKR_MECHANISM_INVALID:
