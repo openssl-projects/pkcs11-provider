@@ -662,27 +662,6 @@ static int p11prov_rsaenc_set_ctx_params(void *ctx, const OSSL_PARAM params[])
                                 encctx->mechtype);
     }
 
-    p = OSSL_PARAM_locate_const(params, OSSL_ASYM_CIPHER_PARAM_OAEP_DIGEST);
-    if (p) {
-        const char *digest = NULL;
-        CK_RV rv;
-
-        ret = OSSL_PARAM_get_utf8_string_ptr(p, &digest);
-        if (ret != RET_OSSL_OK) {
-            return ret;
-        }
-
-        rv = p11prov_digest_get_by_name(digest, &encctx->oaep_params.hashAlg);
-        if (rv != CKR_OK) {
-            ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_DIGEST);
-            return RET_OSSL_ERR;
-        }
-        if (!encctx->mgf_explicit) {
-            encctx->oaep_params.mgf =
-                p11prov_rsaenc_digest_to_mgf(encctx->oaep_params.hashAlg);
-        }
-    }
-
     p = OSSL_PARAM_locate_const(params, OSSL_ASYM_CIPHER_PARAM_MGF1_DIGEST);
     if (p) {
         CK_RSA_PKCS_MGF_TYPE mgf;
@@ -699,6 +678,35 @@ static int p11prov_rsaenc_set_ctx_params(void *ctx, const OSSL_PARAM params[])
         }
         encctx->oaep_params.mgf = mgf;
         encctx->mgf_explicit = true;
+    }
+
+    p = OSSL_PARAM_locate_const(params, OSSL_ASYM_CIPHER_PARAM_OAEP_DIGEST);
+    if (p) {
+        const char *digest = NULL;
+        CK_MECHANISM_TYPE hashAlg;
+        CK_RV rv;
+
+        ret = OSSL_PARAM_get_utf8_string_ptr(p, &digest);
+        if (ret != RET_OSSL_OK) {
+            return ret;
+        }
+
+        rv = p11prov_digest_get_by_name(digest, &hashAlg);
+        if (rv != CKR_OK) {
+            ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_DIGEST);
+            return RET_OSSL_ERR;
+        }
+        if (!encctx->mgf_explicit) {
+            CK_RSA_PKCS_MGF_TYPE mgf;
+
+            mgf = p11prov_rsaenc_digest_to_mgf(hashAlg);
+            if (mgf == CK_UNAVAILABLE_INFORMATION) {
+                ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_MGF1_MD);
+                return RET_OSSL_ERR;
+            }
+            encctx->oaep_params.mgf = mgf;
+        }
+        encctx->oaep_params.hashAlg = hashAlg;
     }
 
     p = OSSL_PARAM_locate_const(params, OSSL_ASYM_CIPHER_PARAM_OAEP_LABEL);

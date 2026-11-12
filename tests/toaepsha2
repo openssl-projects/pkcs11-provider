@@ -47,4 +47,13 @@ for config in "default" "token"; do
     done
 done
 
+title LINE "Setting unsupported OAEP digest without MGF1 fails"
+! ossl '
+pkeyutl -encrypt -inkey "${BASEURI}"
+                 -pubin
+                 -pkeyopt pad-mode:oaep
+                 -pkeyopt digest:sha512-224
+                 -in ${SECRETFILE}
+                 -out ${SECRETFILE}.enc' 2>&1
+
 OPENSSL_CONF=${ORIG_OPENSSL_CONF}
