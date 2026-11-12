@@ -437,6 +437,17 @@ static CK_RV p11prov_sig_operate_init(P11PROV_SIG_CTX *sigctx, bool digest_op,
         }
         if (ret == CKR_OK) {
             sigctx->session_state = SESS_INITIALIZED;
+        } else if (ret == CKR_MECHANISM_INVALID && digest_op
+                   && sigctx->mechanism.mechanism != sigctx->mechtype) {
+            /* The token lists the hash+sign mechanism, but refuses it for
+             * this key (e.g. not in CKA_ALLOWED_MECHANISMS, or the token
+             * cannot do the hash). Hash in software and use the raw
+             * mechanism instead, same as when the mechanism is not
+             * listed at all. */
+            p11prov_return_session(session);
+            session = NULL;
+            ret = mech_fallback_init(sigctx, slotid);
+            goto done;
         }
         break;
     case CKR_MECHANISM_INVALID:
@@ -604,6 +615,19 @@ static CK_RV mech_fallback_final(P11PROV_SIG_CTX *sigctx, unsigned char *sig,
     if (ret != CKR_OK) {
         P11PROV_raise(sigctx->provctx, ret, "Failed to setup sigver fallback");
         goto done;
+    }
+
+    if (sigctx->mechtype == CKM_ECDSA) {
+        /* ECDSA only uses the leftmost bits of the hash up to the size of
+         * the curve order. PKCS#11 says the token should truncate for
+         * CKM_ECDSA, but not all do (e.g. tpm2-pkcs11 fails on a SHA-512
+         * digest with a P-256 key), so do it here. Byte granularity is
+         * enough for all common curve/hash combinations. */
+        CK_ULONG bits = p11prov_obj_get_key_bit_size(sigctx->key);
+        size_t order_len = (bits + 7) / 8;
+        if (bits != CK_UNAVAILABLE_INFORMATION && mdsize > order_len) {
+            mdsize = order_len;
+        }
     }
 
     if (sigctx->fallback_operate) {
