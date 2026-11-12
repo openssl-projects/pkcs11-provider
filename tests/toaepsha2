@@ -28,6 +28,7 @@ oaep_roundtrip() {
 oaep_cases=(
     "RSA basic encrypt and decrypt:-pkeyopt digest:sha256 -pkeyopt mgf1-digest:sha256"
     "Only the OAEP digest set:-pkeyopt digest:sha256"
+    "OAEP digest differing from MGF1 digest:-pkeyopt digest:sha256 -pkeyopt mgf1-digest:sha1"
     "No OAEP parameters set:"
 )
 
@@ -48,12 +49,20 @@ for config in "default" "token"; do
 done
 
 title LINE "Setting unsupported OAEP digest without MGF1 fails"
-! ossl '
+if ossl '
 pkeyutl -encrypt -inkey "${BASEURI}"
                  -pubin
                  -pkeyopt pad-mode:oaep
                  -pkeyopt digest:sha512-224
                  -in ${SECRETFILE}
-                 -out ${SECRETFILE}.enc' 2>&1
+                 -out ${SECRETFILE}.enc 2>&1' "$helper_emit"; then
+    echo "Operation should have failed"
+    exit 1
+fi
+if grep -q "CKR_ARGUMENTS_BAD" <<< "$helper_output"; then
+    echo "Unexpected CKR_ARGUMENTS_BAD error"
+    exit 1
+fi
+grep -q -i "invalid mgf1 md" <<< "$helper_output"
 
 OPENSSL_CONF=${ORIG_OPENSSL_CONF}
