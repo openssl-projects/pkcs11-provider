@@ -34,6 +34,7 @@ SUPPORT_SYMMETRIC=1
 SUPPORT_BLOCK_MODES="CBC OFB CFB CFB1 CFB8 CTR ECB"
 SUPPORT_OPERATION_STATE=0
 SUPPORT_ML_DSA=0
+SUPPORT_ML_DSA_EXTERNAL_MU=0
 SUPPORT_ML_KEM=0
 SUPPORT_SLH_DSA=0
 SUPPORT_ED25519_KEY_GEN=0
@@ -130,6 +131,9 @@ check_algorithm_support "ED448" "EDDSA" "mechtype-0x1057" "EC-EDWARDS-KEY-PAIR-G
 check_algorithm_support "X25519" "ECDH1-DERIVE" "mechtype-0x1050" "EC-MONTGOMERY-KEY-PAIR-GEN" "mechtype-0x1050"
 check_algorithm_support "X448" "ECDH1-DERIVE" "mechtype-0x1050" "EC-MONTGOMERY-KEY-PAIR-GEN" "mechtype-0x1050"
 check_algorithm_support "ML_DSA" "ML-DSA" "mechtype-0x1D" "ML-DSA-KEY-PAIR-GEN" "mechtype-0x1C"
+# External mu signs a plain ML-DSA key, so the key generation mechanisms are
+# ML-DSA's own; only the operation mechanism differs.
+check_algorithm_support "ML_DSA_EXTERNAL_MU" "ML-DSA-EXTERNAL-MU" "mechtype-0x403C" "ML-DSA-KEY-PAIR-GEN" "mechtype-0x1C"
 check_algorithm_support "ML_KEM" "ML-KEM" "mechtype-0x17" "ML-KEM-KEY-PAIR-GEN" "mechtype-0xF"
 check_algorithm_support "SLH_DSA" "SLH-DSA" "mechtype-0x2E" "SLH-DSA-KEY-PAIR-GEN" "mechtype-0x2D"
 
@@ -730,6 +734,7 @@ export SUPPORT_X25519="${SUPPORT_X25519}"
 export SUPPORT_X448="${SUPPORT_X448}"
 export SUPPORT_EDDSA_PARAMS="${SUPPORT_EDDSA_PARAMS}"
 export SUPPORT_ML_DSA="${SUPPORT_ML_DSA}"
+export SUPPORT_ML_DSA_EXTERNAL_MU="${SUPPORT_ML_DSA_EXTERNAL_MU}"
 export SUPPORT_ML_KEM="${SUPPORT_ML_KEM}"
 export SUPPORT_SLH_DSA="${SUPPORT_SLH_DSA}"
 export SUPPORT_RSA_PKCS1_ENCRYPTION="${SUPPORT_RSA_PKCS1_ENCRYPTION}"
