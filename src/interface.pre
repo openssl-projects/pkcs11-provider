@@ -4,7 +4,7 @@
 
 BEGIN:
 
-#define IMPL_CALL_PROLOG(name) \
+#define IMPL_CALL_PROLOG_NO_REINIT(name) \
     P11PROV_INTERFACE *intf = p11prov_ctx_get_interface(ctx); \
     CK_RV ret = CKR_GENERAL_ERROR; \
     if (!intf) { \
@@ -20,11 +20,25 @@ BEGIN:
         return CKR_FUNCTION_NOT_SUPPORTED; \
     } \
     P11PROV_debug("Calling C_" #name);
+#define IMPL_CALL_PROLOG(name) \
+    IMPL_CALL_PROLOG_NO_REINIT(name) \
+    if (p11prov_ctx_needs_reset(ctx)) { \
+        P11PROV_debug("C_%s held back until re-init", #name); \
+        return CKR_DEVICE_ERROR; \
+    }
 #define IMPL_CALL_EPILOG(name) \
     if (ret != CKR_OK) { \
         P11PROV_debug("Error %ld returned by C_" #name, ret); \
+        p11prov_ctx_check_device_error(ctx, ret); \
     } \
     return ret;
+#define IMPL_INTERFACE_NO_REINIT_FN_1_ARG(name, t1, a1) \
+    CK_RV p11prov_##name(P11PROV_CTX *ctx, t1 a1) \
+    { \
+        IMPL_CALL_PROLOG_NO_REINIT(name) \
+        ret = intf->name(a1); \
+        IMPL_CALL_EPILOG(name) \
+    }
 #define IMPL_INTERFACE_FN_1_ARG(name, t1, a1) \
     CK_RV p11prov_##name(P11PROV_CTX *ctx, t1 a1) \
     { \
@@ -88,11 +102,11 @@ BEGIN:
         IMPL_CALL_EPILOG(name) \
     }
 
-IMPL_INTERFACE_FN_1_ARG(Initialize, CK_VOID_PTR, pInitArgs)
+IMPL_INTERFACE_NO_REINIT_FN_1_ARG(Initialize, CK_VOID_PTR, pInitArgs)
 
-IMPL_INTERFACE_FN_1_ARG(Finalize, CK_VOID_PTR, pReserved)
+IMPL_INTERFACE_NO_REINIT_FN_1_ARG(Finalize, CK_VOID_PTR, pReserved)
 
-IMPL_INTERFACE_FN_1_ARG(GetInfo, CK_INFO_PTR, pInfo)
+IMPL_INTERFACE_NO_REINIT_FN_1_ARG(GetInfo, CK_INFO_PTR, pInfo)
 
 IMPL_INTERFACE_FN_4_ARG(GetInterface, CK_UTF8CHAR_PTR, pInterfaceName,
                         CK_VERSION_PTR, pVersion, CK_INTERFACE_PTR_PTR,

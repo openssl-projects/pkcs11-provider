@@ -24,6 +24,7 @@ CK_RV p11prov_Initialize(P11PROV_CTX *ctx, CK_VOID_PTR pInitArgs)
         P11PROV_debug("Error %ld returned by C_"
                       "Initialize",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -51,6 +52,7 @@ CK_RV p11prov_Finalize(P11PROV_CTX *ctx, CK_VOID_PTR pReserved)
         P11PROV_debug("Error %ld returned by C_"
                       "Finalize",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -78,6 +80,7 @@ CK_RV p11prov_GetInfo(P11PROV_CTX *ctx, CK_INFO_PTR pInfo)
         P11PROV_debug("Error %ld returned by C_"
                       "GetInfo",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -102,11 +105,16 @@ CK_RV p11prov_GetInterface(P11PROV_CTX *ctx, CK_UTF8CHAR_PTR pInterfaceName,
     }
     P11PROV_debug("Calling C_"
                   "GetInterface");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "GetInterface");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->GetInterface(pInterfaceName, pVersion, ppInterface, flags);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "GetInterface",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -130,11 +138,16 @@ CK_RV p11prov_GetFunctionList(P11PROV_CTX *ctx,
     }
     P11PROV_debug("Calling C_"
                   "GetFunctionList");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "GetFunctionList");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->GetFunctionList(ppFunctionList);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "GetFunctionList",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -158,11 +171,16 @@ CK_RV p11prov_GetSlotList(P11PROV_CTX *ctx, CK_BBOOL tokenPresent,
     }
     P11PROV_debug("Calling C_"
                   "GetSlotList");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "GetSlotList");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->GetSlotList(tokenPresent, pSlotList, pulCount);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "GetSlotList",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -186,11 +204,16 @@ CK_RV p11prov_GetSlotInfo(P11PROV_CTX *ctx, CK_SLOT_ID slotID,
     }
     P11PROV_debug("Calling C_"
                   "GetSlotInfo");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "GetSlotInfo");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->GetSlotInfo(slotID, pInfo);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "GetSlotInfo",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -214,11 +237,16 @@ CK_RV p11prov_GetTokenInfo(P11PROV_CTX *ctx, CK_SLOT_ID slotID,
     }
     P11PROV_debug("Calling C_"
                   "GetTokenInfo");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "GetTokenInfo");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->GetTokenInfo(slotID, pInfo);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "GetTokenInfo",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -243,11 +271,16 @@ CK_RV p11prov_GetMechanismList(P11PROV_CTX *ctx, CK_SLOT_ID slotID,
     }
     P11PROV_debug("Calling C_"
                   "GetMechanismList");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "GetMechanismList");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->GetMechanismList(slotID, pMechanismList, pulCount);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "GetMechanismList",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -272,11 +305,16 @@ CK_RV p11prov_GetMechanismInfo(P11PROV_CTX *ctx, CK_SLOT_ID slotID,
     }
     P11PROV_debug("Calling C_"
                   "GetMechanismInfo");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "GetMechanismInfo");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->GetMechanismInfo(slotID, type, pInfo);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "GetMechanismInfo",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -301,11 +339,16 @@ CK_RV p11prov_OpenSession(P11PROV_CTX *ctx, CK_SLOT_ID slotID, CK_FLAGS flags,
     }
     P11PROV_debug("Calling C_"
                   "OpenSession");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "OpenSession");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->OpenSession(slotID, flags, pApplication, Notify, phSession);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "OpenSession",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -328,11 +371,16 @@ CK_RV p11prov_CloseSession(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession)
     }
     P11PROV_debug("Calling C_"
                   "CloseSession");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "CloseSession");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->CloseSession(hSession);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "CloseSession",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -356,11 +404,16 @@ CK_RV p11prov_GetSessionInfo(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "GetSessionInfo");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "GetSessionInfo");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->GetSessionInfo(hSession, pInfo);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "GetSessionInfo",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -385,12 +438,17 @@ CK_RV p11prov_GetOperationState(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "GetOperationState");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "GetOperationState");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->GetOperationState(hSession, pOperationState,
                                   pulOperationStateLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "GetOperationState",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -417,6 +475,10 @@ CK_RV p11prov_SetOperationState(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "SetOperationState");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "SetOperationState");
+        return CKR_DEVICE_ERROR;
+    }
     ret =
         intf->SetOperationState(hSession, pOperationState, ulOperationStateLen,
                                 hEncryptionKey, hAuthenticationKey);
@@ -424,6 +486,7 @@ CK_RV p11prov_SetOperationState(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
         P11PROV_debug("Error %ld returned by C_"
                       "SetOperationState",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -448,11 +511,16 @@ CK_RV p11prov_Login(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "Login");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "Login");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->Login(hSession, userType, pPin, ulPinLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "Login",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -477,11 +545,16 @@ CK_RV p11prov_CreateObject(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "CreateObject");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "CreateObject");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->CreateObject(hSession, pTemplate, ulCount, phObject);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "CreateObject",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -506,11 +579,16 @@ CK_RV p11prov_CopyObject(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "CopyObject");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "CopyObject");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->CopyObject(hSession, hObject, pTemplate, ulCount, phNewObject);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "CopyObject",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -534,11 +612,16 @@ CK_RV p11prov_DestroyObject(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "DestroyObject");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "DestroyObject");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->DestroyObject(hSession, hObject);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "DestroyObject",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -563,11 +646,16 @@ CK_RV p11prov_GetAttributeValue(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "GetAttributeValue");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "GetAttributeValue");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->GetAttributeValue(hSession, hObject, pTemplate, ulCount);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "GetAttributeValue",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -592,11 +680,16 @@ CK_RV p11prov_SetAttributeValue(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "SetAttributeValue");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "SetAttributeValue");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->SetAttributeValue(hSession, hObject, pTemplate, ulCount);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "SetAttributeValue",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -620,11 +713,16 @@ CK_RV p11prov_FindObjectsInit(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "FindObjectsInit");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "FindObjectsInit");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->FindObjectsInit(hSession, pTemplate, ulCount);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "FindObjectsInit",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -650,12 +748,17 @@ CK_RV p11prov_FindObjects(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "FindObjects");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "FindObjects");
+        return CKR_DEVICE_ERROR;
+    }
     ret =
         intf->FindObjects(hSession, phObject, ulMaxObjectCount, pulObjectCount);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "FindObjects",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -678,11 +781,16 @@ CK_RV p11prov_FindObjectsFinal(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession)
     }
     P11PROV_debug("Calling C_"
                   "FindObjectsFinal");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "FindObjectsFinal");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->FindObjectsFinal(hSession);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "FindObjectsFinal",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -706,11 +814,16 @@ CK_RV p11prov_EncryptInit(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "EncryptInit");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "EncryptInit");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->EncryptInit(hSession, pMechanism, hKey);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "EncryptInit",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -736,12 +849,17 @@ CK_RV p11prov_Encrypt(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "Encrypt");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "Encrypt");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->Encrypt(hSession, pData, ulDataLen, pEncryptedData,
                         pulEncryptedDataLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "Encrypt",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -767,12 +885,17 @@ CK_RV p11prov_EncryptUpdate(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "EncryptUpdate");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "EncryptUpdate");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->EncryptUpdate(hSession, pPart, ulPartLen, pEncryptedPart,
                               pulEncryptedPartLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "EncryptUpdate",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -797,12 +920,17 @@ CK_RV p11prov_EncryptFinal(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "EncryptFinal");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "EncryptFinal");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->EncryptFinal(hSession, pLastEncryptedPart,
                              pulLastEncryptedPartLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "EncryptFinal",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -826,11 +954,16 @@ CK_RV p11prov_DecryptInit(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "DecryptInit");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "DecryptInit");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->DecryptInit(hSession, pMechanism, hKey);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "DecryptInit",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -855,12 +988,17 @@ CK_RV p11prov_Decrypt(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "Decrypt");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "Decrypt");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->Decrypt(hSession, pEncryptedData, ulEncryptedDataLen, pData,
                         pulDataLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "Decrypt",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -886,12 +1024,17 @@ CK_RV p11prov_DecryptUpdate(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "DecryptUpdate");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "DecryptUpdate");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->DecryptUpdate(hSession, pEncryptedPart, ulEncryptedPartLen,
                               pPart, pulPartLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "DecryptUpdate",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -915,11 +1058,16 @@ CK_RV p11prov_DecryptFinal(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "DecryptFinal");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "DecryptFinal");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->DecryptFinal(hSession, pLastPart, pulLastPartLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "DecryptFinal",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -943,11 +1091,16 @@ CK_RV p11prov_DigestInit(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "DigestInit");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "DigestInit");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->DigestInit(hSession, pMechanism);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "DigestInit",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -971,11 +1124,16 @@ CK_RV p11prov_DigestUpdate(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "DigestUpdate");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "DigestUpdate");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->DigestUpdate(hSession, pPart, ulPartLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "DigestUpdate",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -999,11 +1157,16 @@ CK_RV p11prov_DigestKey(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "DigestKey");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "DigestKey");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->DigestKey(hSession, hKey);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "DigestKey",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1027,11 +1190,16 @@ CK_RV p11prov_DigestFinal(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "DigestFinal");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "DigestFinal");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->DigestFinal(hSession, pDigest, pulDigestLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "DigestFinal",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1055,11 +1223,16 @@ CK_RV p11prov_SignInit(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "SignInit");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "SignInit");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->SignInit(hSession, pMechanism, hKey);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "SignInit",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1084,11 +1257,16 @@ CK_RV p11prov_Sign(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "Sign");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "Sign");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->Sign(hSession, pData, ulDataLen, pSignature, pulSignatureLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "Sign",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1112,11 +1290,16 @@ CK_RV p11prov_SignUpdate(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "SignUpdate");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "SignUpdate");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->SignUpdate(hSession, pPart, ulPartLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "SignUpdate",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1140,11 +1323,16 @@ CK_RV p11prov_SignFinal(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "SignFinal");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "SignFinal");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->SignFinal(hSession, pSignature, pulSignatureLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "SignFinal",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1168,11 +1356,16 @@ CK_RV p11prov_VerifyInit(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "VerifyInit");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "VerifyInit");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->VerifyInit(hSession, pMechanism, hKey);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "VerifyInit",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1197,11 +1390,16 @@ CK_RV p11prov_Verify(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "Verify");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "Verify");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->Verify(hSession, pData, ulDataLen, pSignature, ulSignatureLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "Verify",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1225,11 +1423,16 @@ CK_RV p11prov_VerifyUpdate(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "VerifyUpdate");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "VerifyUpdate");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->VerifyUpdate(hSession, pPart, ulPartLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "VerifyUpdate",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1253,11 +1456,16 @@ CK_RV p11prov_VerifyFinal(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "VerifyFinal");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "VerifyFinal");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->VerifyFinal(hSession, pSignature, ulSignatureLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "VerifyFinal",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1283,11 +1491,16 @@ CK_RV p11prov_GenerateKey(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "GenerateKey");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "GenerateKey");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->GenerateKey(hSession, pMechanism, pTemplate, ulCount, phKey);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "GenerateKey",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1314,6 +1527,10 @@ CK_RV p11prov_GenerateKeyPair(
     }
     P11PROV_debug("Calling C_"
                   "GenerateKeyPair");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "GenerateKeyPair");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->GenerateKeyPair(hSession, pMechanism, pPublicKeyTemplate,
                                 ulPublicKeyAttributeCount, pPrivateKeyTemplate,
                                 ulPrivateKeyAttributeCount, phPublicKey,
@@ -1322,6 +1539,7 @@ CK_RV p11prov_GenerateKeyPair(
         P11PROV_debug("Error %ld returned by C_"
                       "GenerateKeyPair",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1347,12 +1565,17 @@ CK_RV p11prov_DeriveKey(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "DeriveKey");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "DeriveKey");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->DeriveKey(hSession, pMechanism, hBaseKey, pTemplate,
                           ulAttributeCount, phKey);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "DeriveKey",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1376,11 +1599,16 @@ CK_RV p11prov_SeedRandom(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "SeedRandom");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "SeedRandom");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->SeedRandom(hSession, pSeed, ulSeedLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "SeedRandom",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1404,11 +1632,16 @@ CK_RV p11prov_GenerateRandom(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "GenerateRandom");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "GenerateRandom");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->GenerateRandom(hSession, RandomData, ulRandomLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "GenerateRandom",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1432,11 +1665,16 @@ CK_RV p11prov_SessionCancel(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "SessionCancel");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "SessionCancel");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->SessionCancel(hSession, flags);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "SessionCancel",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1461,11 +1699,16 @@ CK_RV p11prov_MessageEncryptInit(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "MessageEncryptInit");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "MessageEncryptInit");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->MessageEncryptInit(hSession, pMechanism, hKey);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "MessageEncryptInit",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1494,6 +1737,10 @@ CK_RV p11prov_EncryptMessage(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "EncryptMessage");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "EncryptMessage");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->EncryptMessage(hSession, pParameter, ulParameterLen,
                                pAssociatedData, ulAssociatedDataLen, pPlaintext,
                                ulPlaintextLen, pCiphertext, pulCiphertextLen);
@@ -1501,6 +1748,7 @@ CK_RV p11prov_EncryptMessage(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
         P11PROV_debug("Error %ld returned by C_"
                       "EncryptMessage",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1527,12 +1775,17 @@ CK_RV p11prov_EncryptMessageBegin(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "EncryptMessageBegin");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "EncryptMessageBegin");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->EncryptMessageBegin(hSession, pParameter, ulParameterLen,
                                     pAssociatedData, ulAssociatedDataLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "EncryptMessageBegin",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1559,6 +1812,10 @@ CK_RV p11prov_EncryptMessageNext(
     }
     P11PROV_debug("Calling C_"
                   "EncryptMessageNext");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "EncryptMessageNext");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->EncryptMessageNext(
         hSession, pParameter, ulParameterLen, pPlaintextPart,
         ulPlaintextPartLen, pCiphertextPart, pulCiphertextPartLen, flags);
@@ -1566,6 +1823,7 @@ CK_RV p11prov_EncryptMessageNext(
         P11PROV_debug("Error %ld returned by C_"
                       "EncryptMessageNext",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1588,11 +1846,16 @@ CK_RV p11prov_MessageEncryptFinal(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession)
     }
     P11PROV_debug("Calling C_"
                   "MessageEncryptFinal");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "MessageEncryptFinal");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->MessageEncryptFinal(hSession);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "MessageEncryptFinal",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1617,11 +1880,16 @@ CK_RV p11prov_MessageDecryptInit(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "MessageDecryptInit");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "MessageDecryptInit");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->MessageDecryptInit(hSession, pMechanism, hKey);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "MessageDecryptInit",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1650,6 +1918,10 @@ CK_RV p11prov_DecryptMessage(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "DecryptMessage");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "DecryptMessage");
+        return CKR_DEVICE_ERROR;
+    }
     ret =
         intf->DecryptMessage(hSession, pParameter, ulParameterLen,
                              pAssociatedData, ulAssociatedDataLen, pCiphertext,
@@ -1658,6 +1930,7 @@ CK_RV p11prov_DecryptMessage(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
         P11PROV_debug("Error %ld returned by C_"
                       "DecryptMessage",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1684,12 +1957,17 @@ CK_RV p11prov_DecryptMessageBegin(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "DecryptMessageBegin");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "DecryptMessageBegin");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->DecryptMessageBegin(hSession, pParameter, ulParameterLen,
                                     pAssociatedData, ulAssociatedDataLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "DecryptMessageBegin",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1716,6 +1994,10 @@ CK_RV p11prov_DecryptMessageNext(
     }
     P11PROV_debug("Calling C_"
                   "DecryptMessageNext");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "DecryptMessageNext");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->DecryptMessageNext(hSession, pParameter, ulParameterLen,
                                    pCiphertextPart, ulCiphertextPartLen,
                                    pPlaintextPart, pulPlaintextPartLen, flags);
@@ -1723,6 +2005,7 @@ CK_RV p11prov_DecryptMessageNext(
         P11PROV_debug("Error %ld returned by C_"
                       "DecryptMessageNext",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1745,11 +2028,16 @@ CK_RV p11prov_MessageDecryptFinal(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession)
     }
     P11PROV_debug("Calling C_"
                   "MessageDecryptFinal");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "MessageDecryptFinal");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->MessageDecryptFinal(hSession);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "MessageDecryptFinal",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1778,6 +2066,10 @@ CK_RV p11prov_EncapsulateKey(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "EncapsulateKey");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "EncapsulateKey");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->EncapsulateKey(hSession, pMechanism, hPublicKey, pTemplate,
                                ulAttributeCount, pCiphertext, pulCiphertextLen,
                                phKey);
@@ -1785,6 +2077,7 @@ CK_RV p11prov_EncapsulateKey(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
         P11PROV_debug("Error %ld returned by C_"
                       "EncapsulateKey",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1813,6 +2106,10 @@ CK_RV p11prov_DecapsulateKey(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "DecapsulateKey");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "DecapsulateKey");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->DecapsulateKey(hSession, pMechanism, hPrivateKey, pTemplate,
                                ulAttributeCount, pCiphertext, ulCiphertextLen,
                                phKey);
@@ -1820,6 +2117,7 @@ CK_RV p11prov_DecapsulateKey(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
         P11PROV_debug("Error %ld returned by C_"
                       "DecapsulateKey",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1845,12 +2143,17 @@ CK_RV p11prov_VerifySignatureInit(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "VerifySignatureInit");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "VerifySignatureInit");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->VerifySignatureInit(hSession, pMechanism, hKey, pSignature,
                                     ulSignatureLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "VerifySignatureInit",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1874,11 +2177,16 @@ CK_RV p11prov_VerifySignature(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession,
     }
     P11PROV_debug("Calling C_"
                   "VerifySignature");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "VerifySignature");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->VerifySignature(hSession, pData, ulDataLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "VerifySignature",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1903,11 +2211,16 @@ CK_RV p11prov_VerifySignatureUpdate(P11PROV_CTX *ctx,
     }
     P11PROV_debug("Calling C_"
                   "VerifySignatureUpdate");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "VerifySignatureUpdate");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->VerifySignatureUpdate(hSession, pPart, ulPartLen);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "VerifySignatureUpdate",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }
@@ -1930,11 +2243,16 @@ CK_RV p11prov_VerifySignatureFinal(P11PROV_CTX *ctx, CK_SESSION_HANDLE hSession)
     }
     P11PROV_debug("Calling C_"
                   "VerifySignatureFinal");
+    if (p11prov_ctx_needs_reset(ctx)) {
+        P11PROV_debug("C_%s held back until re-init", "VerifySignatureFinal");
+        return CKR_DEVICE_ERROR;
+    }
     ret = intf->VerifySignatureFinal(hSession);
     if (ret != CKR_OK) {
         P11PROV_debug("Error %ld returned by C_"
                       "VerifySignatureFinal",
                       ret);
+        p11prov_ctx_check_device_error(ctx, ret);
     }
     return ret;
 }

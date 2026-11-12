@@ -383,6 +383,35 @@ void p11prov_free_slots(P11PROV_SLOTS_CTX *sctx)
     OPENSSL_free(sctx);
 }
 
+void p11prov_slot_reset(P11PROV_SLOTS_CTX *sctx)
+{
+    int err;
+
+    if (!sctx) {
+        return;
+    }
+
+    err = pthread_rwlock_rdlock(&sctx->rwlock);
+    if (err != 0) {
+        err = errno;
+        P11PROV_debug("Failed to get slots lock (errno:%d)", err);
+        return;
+    }
+
+    for (int i = 0; i < sctx->num; i++) {
+        P11PROV_SLOT *slot = sctx->slots[i];
+
+        p11prov_session_pool_reset(slot->pool);
+        p11prov_obj_pool_fork_reset(slot->objects);
+    }
+
+    err = pthread_rwlock_unlock(&sctx->rwlock);
+    if (err != 0) {
+        err = errno;
+        P11PROV_debug("Failed to release slots lock (errno:%d)", err);
+    }
+}
+
 CK_RV p11prov_take_slots(P11PROV_CTX *ctx, P11PROV_SLOTS_CTX **slots)
 {
     P11PROV_SLOTS_CTX *sctx;
