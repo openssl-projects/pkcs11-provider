@@ -45,6 +45,29 @@ struct p11prov_rsaenc_ctx {
     struct tls_padding tls_padding;
 };
 
+/* only the ones we can support */
+static const struct {
+    CK_MECHANISM_TYPE digest;
+    CK_RSA_PKCS_MGF_TYPE mgf;
+} mgf_map[] = {
+    { CKM_SHA3_512, CKG_MGF1_SHA3_512 }, { CKM_SHA3_384, CKG_MGF1_SHA3_384 },
+    { CKM_SHA3_256, CKG_MGF1_SHA3_256 }, { CKM_SHA3_224, CKG_MGF1_SHA3_224 },
+    { CKM_SHA512, CKG_MGF1_SHA512 },     { CKM_SHA384, CKG_MGF1_SHA384 },
+    { CKM_SHA256, CKG_MGF1_SHA256 },     { CKM_SHA224, CKG_MGF1_SHA224 },
+    { CKM_SHA_1, CKG_MGF1_SHA1 },        { CK_UNAVAILABLE_INFORMATION, 0 },
+};
+
+static CK_RSA_PKCS_MGF_TYPE
+p11prov_rsaenc_digest_to_mgf(CK_MECHANISM_TYPE digest)
+{
+    for (int i = 0; mgf_map[i].digest != CK_UNAVAILABLE_INFORMATION; i++) {
+        if (mgf_map[i].digest == digest) {
+            return mgf_map[i].mgf;
+        }
+    }
+    return CK_UNAVAILABLE_INFORMATION;
+}
+
 static void *p11prov_rsaenc_newctx(void *provctx)
 {
     P11PROV_CTX *ctx = (P11PROV_CTX *)provctx;
@@ -62,7 +85,8 @@ static void *p11prov_rsaenc_newctx(void *provctx)
 
     /* Same OAEP defaults as OpenSSL */
     encctx->oaep_params.hashAlg = CKM_SHA_1;
-    encctx->oaep_params.mgf = CKG_MGF1_SHA1;
+    encctx->oaep_params.mgf =
+        p11prov_rsaenc_digest_to_mgf(encctx->oaep_params.hashAlg);
 
     return encctx;
 }
@@ -460,18 +484,6 @@ static const struct {
     { CK_UNAVAILABLE_INFORMATION, 0, NULL },
 };
 
-/* only the ones we can support */
-static const struct {
-    CK_MECHANISM_TYPE digest;
-    CK_RSA_PKCS_MGF_TYPE mgf;
-} mgf_map[] = {
-    { CKM_SHA3_512, CKG_MGF1_SHA3_512 }, { CKM_SHA3_384, CKG_MGF1_SHA3_384 },
-    { CKM_SHA3_256, CKG_MGF1_SHA3_256 }, { CKM_SHA3_224, CKG_MGF1_SHA3_224 },
-    { CKM_SHA512, CKG_MGF1_SHA512 },     { CKM_SHA384, CKG_MGF1_SHA384 },
-    { CKM_SHA256, CKG_MGF1_SHA256 },     { CKM_SHA224, CKG_MGF1_SHA224 },
-    { CKM_SHA_1, CKG_MGF1_SHA1 },        { CK_UNAVAILABLE_INFORMATION, 0 },
-};
-
 static const char *p11prov_rsaenc_mgf_name(CK_RSA_PKCS_MGF_TYPE mgf)
 {
     for (int i = 0; mgf_map[i].digest != CK_UNAVAILABLE_INFORMATION; i++) {
@@ -487,17 +499,6 @@ static const char *p11prov_rsaenc_mgf_name(CK_RSA_PKCS_MGF_TYPE mgf)
         }
     }
     return NULL;
-}
-
-static CK_RSA_PKCS_MGF_TYPE
-p11prov_rsaenc_digest_to_mgf(CK_MECHANISM_TYPE digest)
-{
-    for (int i = 0; mgf_map[i].digest != CK_UNAVAILABLE_INFORMATION; i++) {
-        if (mgf_map[i].digest == digest) {
-            return mgf_map[i].mgf;
-        }
-    }
-    return CK_UNAVAILABLE_INFORMATION;
 }
 
 static CK_RSA_PKCS_MGF_TYPE p11prov_rsaenc_map_mgf(const char *digest_name)
