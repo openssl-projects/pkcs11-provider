@@ -47,6 +47,10 @@ struct p11prov_sig_ctx {
     CK_ML_DSA_PARAMETER_SET_TYPE mldsa_paramset;
     CK_SLH_DSA_PARAMETER_SET_TYPE slhdsa_paramset;
     CK_SIGN_ADDITIONAL_CONTEXT additional_context;
+    /* ML-DSA "mu" parameter: the data to sign is the 64-byte message
+     * representative rather than the message, selecting
+     * CKM_ML_DSA_EXTERNAL_MU instead of CKM_ML_DSA. */
+    bool mldsa_external_mu;
 
     /* Signature to be verified, used by verify_message_final() */
     unsigned char *signature;

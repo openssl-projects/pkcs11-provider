@@ -1,0 +1,98 @@
+#!/bin/bash -e
+# Copyright (C) 2026 Simo Sorce <simo@redhat.com>
+# SPDX-License-Identifier: Apache-2.0
+
+source "${TESTSSRCDIR}/helpers.sh"
+
+if [[ "${SUPPORT_ML_DSA_EXTERNAL_MU}" != "1" ]]; then
+    exit 77;
+fi
+
+# ML-DSA external mu: the data handed to the token is the 64-byte message
+# representative instead of the message. The signature that comes back is an
+# ordinary ML-DSA signature over the message, so every check below verifies
+# against the original message with no mu on the verify side. That is what
+# makes this a real test: a mu computed wrongly cannot produce a false pass.
+#
+# mu is built here per FIPS 204:
+#     tr = SHAKE256(pk, 64)
+#     M' = 0x00 || len(ctx) || ctx || message
+#     mu = SHAKE256(tr || M', 64)
+
+title PARA "Export the ML-DSA public key to compute mu from"
+ossl 'pkey -in $MLDSAPUBURI -pubin -pubout -outform DER -out ${TMPPDIR}/mldsa_extmu.der'
+
+# The raw FIPS 204 public key is the tail of the SubjectPublicKeyInfo: 1312
+# bytes for ML-DSA-44, which is what setup.sh generates. Guard the assumption
+# rather than silently hashing the wrong bytes.
+MLDSA44_PK_LEN=1312
+der_len=$(wc -c < "${TMPPDIR}/mldsa_extmu.der" | tr -d ' ')
+if [ "$der_len" -le "$MLDSA44_PK_LEN" ]; then
+    echo "Unexpected SPKI length $der_len, expected more than $MLDSA44_PK_LEN"
+    exit 1
+fi
+tail -c "$MLDSA44_PK_LEN" "${TMPPDIR}/mldsa_extmu.der" > "${TMPPDIR}/mldsa_extmu.pk"
+
+title LINE "Compute tr = SHAKE256(pk, 64)"
+openssl dgst -shake256 -xoflen 64 -binary \
+    "${TMPPDIR}/mldsa_extmu.pk" > "${TMPPDIR}/mldsa_extmu.tr"
+
+# mu for the empty context: M' is prefixed with 0x00 (pure ML-DSA) and a
+# zero context length.
+title LINE "Compute mu over the message"
+{ cat "${TMPPDIR}/mldsa_extmu.tr"; printf '\000\000'; cat "${RAND64FILE}"; } |
+    openssl dgst -shake256 -xoflen 64 -binary > "${TMPPDIR}/mldsa_extmu.mu"
+
+mu_len=$(wc -c < "${TMPPDIR}/mldsa_extmu.mu" | tr -d ' ')
+if [ "$mu_len" -ne 64 ]; then
+    echo "mu must be 64 bytes, got $mu_len"
+    exit 1
+fi
+
+title PARA "Sign the externally computed mu"
+ossl '
+pkeyutl -sign -pkeyopt mu:1
+        -inkey "${MLDSAPRIURI}"
+        -in ${TMPPDIR}/mldsa_extmu.mu
+        -out ${TMPPDIR}/mldsa_extmu.sig'
+
+title LINE "Verify against the original message, with no mu on the verify side"
+ossl '
+pkeyutl -verify
+        -inkey "${MLDSAPUBURI}" -pubin
+        -in ${RAND64FILE} -rawin
+        -sigfile ${TMPPDIR}/mldsa_extmu.sig'
+
+title LINE "Verify by supplying mu directly"
+ossl '
+pkeyutl -verify -pkeyopt mu:1
+        -inkey "${MLDSAPUBURI}" -pubin
+        -in ${TMPPDIR}/mldsa_extmu.mu
+        -sigfile ${TMPPDIR}/mldsa_extmu.sig'
+
+title LINE "A different mu must not verify"
+dd if=/dev/urandom of="${TMPPDIR}/mldsa_extmu.wrongmu" bs=64 count=1 >/dev/null 2>&1
+FAIL=0
+ossl '
+pkeyutl -verify -pkeyopt mu:1
+        -inkey "${MLDSAPUBURI}" -pubin
+        -in ${TMPPDIR}/mldsa_extmu.wrongmu
+        -sigfile ${TMPPDIR}/mldsa_extmu.sig' || FAIL=1
+if [ $FAIL -eq 0 ]; then
+    echo "Signature verified against the wrong mu"
+    exit 1
+fi
+
+title PARA "A context string cannot be combined with mu"
+FAIL=0
+ossl '
+pkeyutl -sign -pkeyopt mu:1 -pkeyopt context-string:test
+        -inkey "${MLDSAPRIURI}"
+        -in ${TMPPDIR}/mldsa_extmu.mu
+        -out ${TMPPDIR}/mldsa_extmu.badsig' || FAIL=1
+if [ $FAIL -eq 0 ]; then
+    echo "mu combined with a context string was accepted"
+    exit 1
+fi
+
+exit 0

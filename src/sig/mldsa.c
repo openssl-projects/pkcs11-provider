@@ -33,9 +33,16 @@ DISPATCH_MLDSA_FN(settable_ctx_params);
 
 static CK_RV p11prov_mldsa_set_mechanism(P11PROV_SIG_CTX *sigctx)
 {
-    sigctx->mechanism.mechanism = CKM_ML_DSA;
+    if (sigctx->mldsa_external_mu) {
+        sigctx->mechanism.mechanism = CKM_ML_DSA_EXTERNAL_MU;
+    } else {
+        sigctx->mechanism.mechanism = CKM_ML_DSA;
+    }
     /* we set the optional additional context only if non-default parameters
-     * need to be passed in */
+     * need to be passed in. For CKM_ML_DSA_EXTERNAL_MU the spec requires
+     * ulContextLen to be zero -- any context is already folded into mu by
+     * the caller -- and set_ctx_params rejects the combination, so only the
+     * hedgeVariant can be non-default here. */
     if (sigctx->additional_context.pContext
         || sigctx->additional_context.hedgeVariant != CKH_HEDGE_PREFERRED) {
         sigctx->mechanism.pParameter = &sigctx->additional_context;
@@ -509,11 +516,21 @@ static int p11prov_mldsa_set_ctx_params(void *ctx, const OSSL_PARAM params[])
         if (ret != RET_OSSL_OK) {
             return ret;
         }
-        if (mu != 0) {
-            P11PROV_raise(sigctx->provctx, CKR_ARGUMENTS_BAD,
-                          "Unsupported 'mu' parameter");
-            return RET_OSSL_ERR;
-        }
+        /* mu selects CKM_ML_DSA_EXTERNAL_MU: the data handed to the token is
+         * the 64-byte message representative, computed by the caller,
+         * instead of the message itself. */
+        sigctx->mldsa_external_mu = (mu != 0);
+    }
+
+    /* A context string has no meaning once mu has been computed -- it is
+     * already folded in -- and PKCS#11 requires ulContextLen to be zero for
+     * CKM_ML_DSA_EXTERNAL_MU. Catch the contradiction here rather than
+     * letting the token reject it with CKR_MECHANISM_PARAM_INVALID. */
+    if (sigctx->mldsa_external_mu
+        && sigctx->additional_context.ulContextLen != 0) {
+        P11PROV_raise(sigctx->provctx, CKR_ARGUMENTS_BAD,
+                      "'context-string' cannot be combined with 'mu'");
+        return RET_OSSL_ERR;
     }
 
 #if defined(OSSL_SIGNATURE_PARAM_SIGNATURE)
