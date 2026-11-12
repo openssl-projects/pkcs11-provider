@@ -28,9 +28,15 @@ oaep_roundtrip() {
 oaep_cases=(
     "RSA basic encrypt and decrypt:-pkeyopt digest:sha256 -pkeyopt mgf1-digest:sha256"
     "Only the OAEP digest set:-pkeyopt digest:sha256"
-    "OAEP digest differing from MGF1 digest:-pkeyopt digest:sha256 -pkeyopt mgf1-digest:sha1"
-    "No OAEP parameters set:"
+    "OAEP digest differing from MGF1 digest:-pkeyopt digest:sha256 -pkeyopt mgf1-digest:sha384"
 )
+
+# OpenSSL defaults to SHA-1 when no parameters are set, which is not permitted in FIPS mode
+if [[ "${SUPPORT_RSA_OAEP_SHA1:-1}" = "1" ]]; then
+    oaep_cases+=(
+        "No OAEP parameters set:"
+    )
+fi
 
 ORIG_OPENSSL_CONF=${OPENSSL_CONF}
 
