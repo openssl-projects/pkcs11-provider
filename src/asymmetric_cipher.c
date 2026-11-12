@@ -7,6 +7,7 @@
 #include "openssl/prov_ssl.h"
 #include "openssl/rsa.h"
 #include "openssl/rand.h"
+#include "sig/signature.h"
 
 #define DISPATCH_RSAENC_FN(name) \
     DECL_DISPATCH_FUNC(asym_cipher, p11prov_rsaenc, name)
@@ -45,29 +46,6 @@ struct p11prov_rsaenc_ctx {
     struct tls_padding tls_padding;
 };
 
-/* only the ones we can support */
-static const struct {
-    CK_MECHANISM_TYPE digest;
-    CK_RSA_PKCS_MGF_TYPE mgf;
-} mgf_map[] = {
-    { CKM_SHA3_512, CKG_MGF1_SHA3_512 }, { CKM_SHA3_384, CKG_MGF1_SHA3_384 },
-    { CKM_SHA3_256, CKG_MGF1_SHA3_256 }, { CKM_SHA3_224, CKG_MGF1_SHA3_224 },
-    { CKM_SHA512, CKG_MGF1_SHA512 },     { CKM_SHA384, CKG_MGF1_SHA384 },
-    { CKM_SHA256, CKG_MGF1_SHA256 },     { CKM_SHA224, CKG_MGF1_SHA224 },
-    { CKM_SHA_1, CKG_MGF1_SHA1 },        { CK_UNAVAILABLE_INFORMATION, 0 },
-};
-
-static CK_RSA_PKCS_MGF_TYPE
-p11prov_rsaenc_digest_to_mgf(CK_MECHANISM_TYPE digest)
-{
-    for (int i = 0; mgf_map[i].digest != CK_UNAVAILABLE_INFORMATION; i++) {
-        if (mgf_map[i].digest == digest) {
-            return mgf_map[i].mgf;
-        }
-    }
-    return CK_UNAVAILABLE_INFORMATION;
-}
-
 static void *p11prov_rsaenc_newctx(void *provctx)
 {
     P11PROV_CTX *ctx = (P11PROV_CTX *)provctx;
@@ -86,7 +64,7 @@ static void *p11prov_rsaenc_newctx(void *provctx)
     /* Same OAEP defaults as OpenSSL */
     encctx->oaep_params.hashAlg = CKM_SHA_1;
     encctx->oaep_params.mgf =
-        p11prov_rsaenc_digest_to_mgf(encctx->oaep_params.hashAlg);
+        p11prov_digest_to_mgf(encctx->oaep_params.hashAlg);
 
     return encctx;
 }
@@ -486,19 +464,20 @@ static const struct {
 
 static const char *p11prov_rsaenc_mgf_name(CK_RSA_PKCS_MGF_TYPE mgf)
 {
-    for (int i = 0; mgf_map[i].digest != CK_UNAVAILABLE_INFORMATION; i++) {
-        if (mgf_map[i].mgf == mgf) {
-            const char *name;
-            CK_RV rv;
+    CK_MECHANISM_TYPE digest;
+    const char *name;
+    CK_RV rv;
 
-            rv = p11prov_digest_get_name(mgf_map[i].digest, &name);
-            if (rv != CKR_OK) {
-                return NULL;
-            }
-            return name;
-        }
+    digest = p11prov_mgf_to_digest(mgf);
+    if (digest == CK_UNAVAILABLE_INFORMATION) {
+        return NULL;
     }
-    return NULL;
+
+    rv = p11prov_digest_get_name(digest, &name);
+    if (rv != CKR_OK) {
+        return NULL;
+    }
+    return name;
 }
 
 static CK_RSA_PKCS_MGF_TYPE p11prov_rsaenc_map_mgf(const char *digest_name)
@@ -511,7 +490,7 @@ static CK_RSA_PKCS_MGF_TYPE p11prov_rsaenc_map_mgf(const char *digest_name)
         return CK_UNAVAILABLE_INFORMATION;
     }
 
-    return p11prov_rsaenc_digest_to_mgf(digest);
+    return p11prov_digest_to_mgf(digest);
 }
 
 static int p11prov_rsaenc_get_ctx_params(void *ctx, OSSL_PARAM *params)
@@ -700,7 +679,7 @@ static int p11prov_rsaenc_set_ctx_params(void *ctx, const OSSL_PARAM params[])
         if (!encctx->mgf_explicit) {
             CK_RSA_PKCS_MGF_TYPE mgf;
 
-            mgf = p11prov_rsaenc_digest_to_mgf(hashAlg);
+            mgf = p11prov_digest_to_mgf(hashAlg);
             if (mgf == CK_UNAVAILABLE_INFORMATION) {
                 ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_MGF1_MD);
                 return RET_OSSL_ERR;
