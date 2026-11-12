@@ -617,6 +617,19 @@ static CK_RV mech_fallback_final(P11PROV_SIG_CTX *sigctx, unsigned char *sig,
         goto done;
     }
 
+    if (sigctx->mechtype == CKM_ECDSA) {
+        /* ECDSA only uses the leftmost bits of the hash up to the size of
+         * the curve order. PKCS#11 says the token should truncate for
+         * CKM_ECDSA, but not all do (e.g. tpm2-pkcs11 fails on a SHA-512
+         * digest with a P-256 key), so do it here. Byte granularity is
+         * enough for all common curve/hash combinations. */
+        CK_ULONG bits = p11prov_obj_get_key_bit_size(sigctx->key);
+        size_t order_len = (bits + 7) / 8;
+        if (bits != CK_UNAVAILABLE_INFORMATION && mdsize > order_len) {
+            mdsize = order_len;
+        }
+    }
+
     if (sigctx->fallback_operate) {
         ret = sigctx->fallback_operate(subctx, sig, siglen, sigsize, digest,
                                        mdsize);
