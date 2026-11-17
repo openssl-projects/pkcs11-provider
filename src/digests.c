@@ -6,7 +6,7 @@
 #include <string.h>
 
 /* General Digest Mapping functions */
-static struct {
+static const struct {
     CK_MECHANISM_TYPE digest;
     size_t block_size;
     size_t digest_size;

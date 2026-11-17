@@ -6,45 +6,69 @@ source "${TESTSSRCDIR}/helpers.sh"
 
 SECRETFILE=${TMPPDIR}/rsa-oaep-secret.txt
 echo "Super Secret" > "${SECRETFILE}"
-title PARA "Encrypt and decrypt with RSA OAEP"
-# Let openssl encrypt by importing the public key
-ossl '
-pkeyutl -encrypt -inkey "${BASEURI}"
-                 -pubin
-                 -pkeyopt pad-mode:oaep
-                 -pkeyopt digest:sha256
-                 -pkeyopt mgf1-digest:sha256
-                 -in ${SECRETFILE}
-                 -out ${SECRETFILE}.enc'
-ossl '
-pkeyutl -decrypt -inkey "${PRIURI}"
-                 -pkeyopt pad-mode:oaep
-                 -pkeyopt digest:sha256
-                 -pkeyopt mgf1-digest:sha256
-                 -in ${SECRETFILE}.enc
-                 -out ${SECRETFILE}.dec'
-diff "${SECRETFILE}" "${SECRETFILE}.dec"
 
-# Do the same while forcing the encryption to be done on the token
+oaep_roundtrip() {
+    title LINE "$1"
+    ossl "
+    pkeyutl -encrypt -inkey \"\${BASEURI}\"
+                     -pubin
+                     -pkeyopt pad-mode:oaep
+                     $2
+                     -in \${SECRETFILE}
+                     -out \${SECRETFILE}.enc"
+    ossl "
+    pkeyutl -decrypt -inkey \"\${PRIURI}\"
+                     -pkeyopt pad-mode:oaep
+                     $2
+                     -in \${SECRETFILE}.enc
+                     -out \${SECRETFILE}.dec"
+    diff "${SECRETFILE}" "${SECRETFILE}.dec"
+}
+
+oaep_cases=(
+    "RSA basic encrypt and decrypt:-pkeyopt digest:sha256 -pkeyopt mgf1-digest:sha256"
+    "Only the OAEP digest set:-pkeyopt digest:sha256"
+    "OAEP digest differing from MGF1 digest:-pkeyopt digest:sha256 -pkeyopt mgf1-digest:sha384"
+)
+
+# OpenSSL defaults to SHA-1 when no parameters are set, which is not permitted in FIPS mode
+if [[ "${SUPPORT_RSA_OAEP_SHA1:-1}" = "1" ]]; then
+    oaep_cases+=(
+        "No OAEP parameters set:"
+    )
+fi
+
 ORIG_OPENSSL_CONF=${OPENSSL_CONF}
-OPENSSL_CONF=${OPENSSL_CONF}.forcetoken
 
-title LINE "RSA basic encrypt and decrypt, forcing encryption on token"
-ossl '
+for config in "default" "token"; do
+    if [ "${config}" = "token" ]; then
+        OPENSSL_CONF=${ORIG_OPENSSL_CONF}.forcetoken
+        suffix="forcing encryption on token"
+    else
+        suffix="default provider encrypts"
+    fi
+
+    title PARA "RSA OAEP encrypt and decrypt (${suffix})"
+    for case in "${oaep_cases[@]}"; do
+        oaep_roundtrip "${case%%:*}, ${suffix}" "${case#*:}"
+    done
+done
+
+title LINE "Setting unsupported OAEP digest without MGF1 fails"
+if ossl '
 pkeyutl -encrypt -inkey "${BASEURI}"
                  -pubin
                  -pkeyopt pad-mode:oaep
-                 -pkeyopt digest:sha256
-                 -pkeyopt mgf1-digest:sha256
+                 -pkeyopt digest:sha512-224
                  -in ${SECRETFILE}
-                 -out ${SECRETFILE}.enc'
-ossl '
-pkeyutl -decrypt -inkey "${PRIURI}"
-                 -pkeyopt pad-mode:oaep
-                 -pkeyopt digest:sha256
-                 -pkeyopt mgf1-digest:sha256
-                 -in ${SECRETFILE}.enc
-                 -out ${SECRETFILE}.dec'
-diff "${SECRETFILE}" "${SECRETFILE}.dec"
+                 -out ${SECRETFILE}.enc 2>&1' "$helper_emit"; then
+    echo "Operation should have failed"
+    exit 1
+fi
+if grep -q "CKR_ARGUMENTS_BAD" <<< "$helper_output"; then
+    echo "Unexpected CKR_ARGUMENTS_BAD error"
+    exit 1
+fi
+grep -q -i "invalid mgf1 md" <<< "$helper_output"
 
 OPENSSL_CONF=${ORIG_OPENSSL_CONF}

@@ -124,7 +124,7 @@ DEFINE_DER_SEQ_SHA3(224, 0x0D, 0x07);
         .der_rsa_pss_params_len = sizeof(der_rsa_pss_params_sha3_##bits), \
     }
 
-struct rsasig_data {
+static const struct rsasig_data {
     CK_MECHANISM_TYPE digest;
     CK_MECHANISM_TYPE pkcs_mech;
     CK_MECHANISM_TYPE pkcs_pss;
@@ -192,18 +192,42 @@ static const struct rsasig_data *rsasig_pss_map(CK_MECHANISM_TYPE pssmech)
     return NULL;
 }
 
-static const char *p11prov_sig_mgf_name(CK_RSA_PKCS_MGF_TYPE mgf)
+CK_RSA_PKCS_MGF_TYPE p11prov_digest_to_mgf(CK_MECHANISM_TYPE digest)
 {
     const struct rsasig_data *data;
-    const char *digest_name;
-    CK_RV rv;
+
+    data = rsasig_digest_map(digest);
+    if (!data) {
+        return CK_UNAVAILABLE_INFORMATION;
+    }
+
+    return data->mgf;
+}
+
+CK_MECHANISM_TYPE p11prov_mgf_to_digest(CK_RSA_PKCS_MGF_TYPE mgf)
+{
+    const struct rsasig_data *data;
 
     data = rsasig_mgf_map(mgf);
     if (!data) {
+        return CK_UNAVAILABLE_INFORMATION;
+    }
+
+    return data->digest;
+}
+
+static const char *p11prov_sig_mgf_name(CK_RSA_PKCS_MGF_TYPE mgf)
+{
+    CK_MECHANISM_TYPE digest;
+    const char *digest_name;
+    CK_RV rv;
+
+    digest = p11prov_mgf_to_digest(mgf);
+    if (digest == CK_UNAVAILABLE_INFORMATION) {
         return NULL;
     }
 
-    rv = p11prov_digest_get_name(data->digest, &digest_name);
+    rv = p11prov_digest_get_name(digest, &digest_name);
     if (rv != CKR_OK) {
         return NULL;
     }
@@ -214,7 +238,6 @@ static const char *p11prov_sig_mgf_name(CK_RSA_PKCS_MGF_TYPE mgf)
 static CK_RSA_PKCS_MGF_TYPE p11prov_sig_map_mgf(const char *digest_name)
 {
     CK_MECHANISM_TYPE digest;
-    const struct rsasig_data *data;
     CK_RV rv;
 
     rv = p11prov_digest_get_by_name(digest_name, &digest);
@@ -222,12 +245,7 @@ static CK_RSA_PKCS_MGF_TYPE p11prov_sig_map_mgf(const char *digest_name)
         return CK_UNAVAILABLE_INFORMATION;
     }
 
-    data = rsasig_digest_map(digest);
-    if (!data) {
-        return CK_UNAVAILABLE_INFORMATION;
-    }
-
-    return data->mgf;
+    return p11prov_digest_to_mgf(digest);
 }
 
 static CK_RV p11prov_sig_pss_restrictions(P11PROV_SIG_CTX *sigctx,
@@ -839,7 +857,7 @@ static int p11prov_rsasig_verify_message_final(void *ctx)
 }
 #endif /* OSSL_FUNC_SIGNATURE_SIGN_MESSAGE_INIT */
 
-static struct {
+static const struct {
     CK_MECHANISM_TYPE type;
     int ossl_id;
     const char *string;

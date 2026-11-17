@@ -59,7 +59,7 @@ DER_ECDSA_DEFS(256, 0x02, 0x0A);
 DER_ECDSA_DEFS(384, 0x03, 0x0B);
 DER_ECDSA_DEFS(512, 0x04, 0x0C);
 
-struct ecdsa_data {
+static const struct ecdsa_data {
     CK_MECHANISM_TYPE digest;
     CK_MECHANISM_TYPE mech;
     const void *der;

@@ -397,6 +397,9 @@ static int get_pin_source(P11PROV_CTX *ctx, const char *str, size_t len,
         ret = get_pin_env(ctx, pinsource + 4, output);
     } else if (*pinsource == '|') {
         ret = EINVAL;
+    } else {
+        /* no scheme: a path, as in other PKCS#11 URI consumers */
+        ret = get_pin_file(ctx, pinsource, output);
     }
     OPENSSL_free(pinsource);
     return ret;
@@ -704,7 +707,7 @@ P11PROV_URI *p11prov_parse_uri(P11PROV_CTX *ctx, const char *uri)
 
     P11PROV_debug("ctx=%p uri=%s)", ctx, uri);
 
-    if (strncmp(uri, "pkcs11:", 7) != 0) {
+    if (OPENSSL_strncasecmp(uri, "pkcs11:", 7) != 0) {
         return NULL;
     }
 
@@ -1540,7 +1543,7 @@ void p11prov_set_attr_bool(CK_ATTRIBUTE *tmpl, CK_ATTRIBUTE_TYPE type, bool v)
 CK_RV p11prov_usage_to_template(CK_ATTRIBUTE *tmpl, size_t *size, size_t max,
                                 CK_FLAGS usage)
 {
-    static struct flag_to_attr {
+    static const struct flag_to_attr {
         CK_FLAGS flag;
         CK_ATTRIBUTE_TYPE type;
     } flag_to_attr[] = {

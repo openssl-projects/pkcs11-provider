@@ -34,7 +34,7 @@ typedef struct p11prov_exch_ctx P11PROV_EXCH_CTX;
         .digest = CKM_SHA3_##bits, .kdf = CKD_SHA3_##bits##_KDF \
     }
 /* only the ones we can support */
-static struct {
+static const struct {
     CK_MECHANISM_TYPE digest;
     CK_RSA_PKCS_MGF_TYPE kdf;
 } kdf_map[] = {
