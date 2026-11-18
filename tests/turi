@@ -57,3 +57,42 @@ for cmp in "${firstCMPS[@]}"; do
         echo "Failed to get an object with URI \"pkcs11:${cmp}\""
     fi
 done
+
+title PARA "Check library attributes are matched against the module"
+info=$(ptool -I 2>/dev/null)
+libmanuf=$(echo "$info" | sed -n 's/^Manufacturer *//p')
+libdesc=$(echo "$info" | sed -n 's/^Library *\(.*\) (ver [0-9.]*)$/\1/p')
+libver=$(echo "$info" | sed -n 's/^Library .* (ver \([0-9.]*\))$/\1/p')
+echo "manufacturer=[${libmanuf}] description=[${libdesc}] version=[${libver}]"
+if [ -z "${libmanuf}" ] || [ -z "${libdesc}" ] || [ -z "${libver}" ]; then
+    echo "Failed to get the module information from pkcs11-tool"
+    exit 1
+fi
+libmanuf=${libmanuf// /%20}
+libdesc=${libdesc// /%20}
+# bump the minor version, wrapping around, to get a version that differs
+otherver="${libver%.*}.$(( (${libver#*.} + 1) % 256 ))"
+
+for cmp in "library-manufacturer=${libmanuf}" \
+           "library-description=${libdesc}" \
+           "library-version=${libver}"; do
+    echo "\$cmp=${cmp}"
+    ossl 'storeutl -text "pkcs11:${cmp}"' "$helper_emit"
+    output="$helper_output"
+    if ! echo "$output" | grep "URI pkcs11:" > /dev/null 2>&1; then
+        echo "Failed to get an object with URI \"pkcs11:${cmp}\""
+        exit 1
+    fi
+done
+
+for cmp in "library-manufacturer=Not%20${libmanuf}" \
+           "library-description=Not%20${libdesc}" \
+           "library-version=${otherver}"; do
+    echo "\$cmp=${cmp}"
+    ossl 'storeutl -text "pkcs11:${cmp}"' "$helper_emit" || true
+    output="$helper_output"
+    if echo "$output" | grep "URI pkcs11:" > /dev/null 2>&1; then
+        echo "Got an object with URI \"pkcs11:${cmp}\" that does not match the module"
+        exit 1
+    fi
+done
