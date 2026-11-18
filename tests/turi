@@ -43,20 +43,23 @@ for uri in "${URIS[@]}"; do
     fi
 done
 
-firstURI=${URIS[0]#URI pkcs11:}
+firstURI=${URIS[0]#pkcs11:}
 IFS=";" read -r -a firstCMPS <<< "$firstURI"
 
 title PARA "Check each URI component is tested"
 
 for cmp in "${firstCMPS[@]}"; do
     echo "\$cmp=${cmp}"
-    ossl 'storeutl -text "pkcs11:${cmp}"' "$helper_emit"
+    ossl 'storeutl -text ${PROPQUERY} "pkcs11:${cmp}"' "$helper_emit"
     output="$helper_output"
-    echo "$output" | grep "URI pkcs11:" > /dev/null 2>&1 || FAIL=1
-    if [ $FAIL -ne 0 ]; then
+    if ! echo "$output" | grep "URI pkcs11:" > /dev/null 2>&1; then
         echo "Failed to get an object with URI \"pkcs11:${cmp}\""
+        FAIL=1
     fi
 done
+if [ $FAIL -ne 0 ]; then
+    exit 1
+fi
 
 title PARA "Check library attributes are matched against the module"
 info=$(ptool -I 2>/dev/null)
