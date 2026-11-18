@@ -73,6 +73,7 @@ CK_RV p11prov_uri_set_slot_id(P11PROV_URI *uri, CK_SLOT_ID slot_id);
 P11PROV_URI *p11prov_copy_uri(P11PROV_URI *uri);
 CK_RV p11prov_uri_match_token(P11PROV_URI *uri, CK_SLOT_ID slot_id,
                               CK_SLOT_INFO *slot, CK_TOKEN_INFO *token);
+CK_RV p11prov_uri_match_module(P11PROV_URI *uri, CK_INFO *info);
 int p11prov_get_pin(P11PROV_CTX *ctx, const char *in, char **out);
 bool cyclewait_with_timeout(uint64_t max_wait, uint64_t interval,
                             uint64_t *start_time);

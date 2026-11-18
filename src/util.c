@@ -1135,6 +1135,29 @@ CK_RV p11prov_uri_match_token(P11PROV_URI *uri, CK_SLOT_ID slot_id,
     return CKR_OK;
 }
 
+CK_RV p11prov_uri_match_module(P11PROV_URI *uri, CK_INFO *info)
+{
+    if (uri->library_manufacturer
+        && strncmp(uri->library_manufacturer,
+                   (const char *)info->manufacturerID, 32)
+               != 0) {
+        return CKR_CANCEL;
+    }
+    if (uri->library_description
+        && strncmp(uri->library_description,
+                   (const char *)info->libraryDescription, 32)
+               != 0) {
+        return CKR_CANCEL;
+    }
+    if (uri->library_version
+        && (uri->library_version->major != info->libraryVersion.major
+            || uri->library_version->minor != info->libraryVersion.minor)) {
+        return CKR_CANCEL;
+    }
+
+    return CKR_OK;
+}
+
 int p11prov_get_pin(P11PROV_CTX *ctx, const char *in, char **out)
 {
     if (strncmp(in, "file:", 5) == 0) {

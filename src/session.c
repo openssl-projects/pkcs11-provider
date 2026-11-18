@@ -715,6 +715,12 @@ static CK_RV check_slot(P11PROV_CTX *ctx, P11PROV_SLOT *slot, P11PROV_URI *uri,
         return CKR_TOKEN_WRITE_PROTECTED;
     }
     if (uri) {
+        CK_INFO ck_info = p11prov_ctx_get_ck_info(ctx);
+
+        ret = p11prov_uri_match_module(uri, &ck_info);
+        if (ret != CKR_OK) {
+            return ret;
+        }
         ret = p11prov_uri_match_token(uri, slotid, ck_slot, token);
         if (ret != CKR_OK) {
             return ret;
