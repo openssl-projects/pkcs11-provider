@@ -405,6 +405,7 @@ int main(int argc, char *argv[])
     const char *support_ml_dsa = NULL;
     const char *support_ml_kem = NULL;
     const char *support_slh_dsa = NULL;
+    const char *support_eddsa_params = NULL;
     const unsigned char *data = (const unsigned char *)"Sign Me!";
     unsigned char *sig;
     size_t siglen;
@@ -441,11 +442,19 @@ int main(int argc, char *argv[])
     support_ml_dsa = getenv("SUPPORT_ML_DSA");
     support_ml_kem = getenv("SUPPORT_ML_KEM");
     support_slh_dsa = getenv("SUPPORT_SLH_DSA");
+    support_eddsa_params = getenv("SUPPORT_EDDSA_PARAMS");
 
     for (i = 0; i < (sizeof(tests) / sizeof(tests[0])); i++) {
         /* Softokn does not handle Edwards keys yet */
         if (strcmp(tests[i].key_type, "ED 25519") == 0
             && strcmp(driver, "softokn") == 0) {
+            continue;
+        }
+
+        /* Ed25519ph needs CK_EDDSA_PARAMS, which some tokens refuse */
+        if (strcmp(tests[i].sigalg, "Ed25519ph") == 0
+            && support_eddsa_params != NULL
+            && strcmp(support_eddsa_params, "0") == 0) {
             continue;
         }
 
