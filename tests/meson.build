@@ -150,7 +150,7 @@ uri_parse_test = executable(
 )
 
 setup_script=find_program('setup.sh')
-all_suites=['softokn', 'softhsm', 'kryoptic', 'kryoptic.nss']
+all_suites=['softokn', 'softhsm', 'kryoptic', 'kryoptic.nss', 'freehsm']
 test(
   'ec-point-decode',
   ec_point_test,
@@ -175,43 +175,43 @@ endforeach
 
 tests = {
   'basic': {'suites': all_suites},
-  'mlkem': {'suites': ['kryoptic']},
-  'mldsa': {'suites': ['kryoptic']},
-  'slhdsa': {'suites': ['kryoptic']},
+  'mlkem': {'suites': ['kryoptic', 'freehsm']},
+  'mldsa': {'suites': ['kryoptic', 'freehsm']},
+  'slhdsa': {'suites': ['kryoptic', 'freehsm']},
   'pubkey': {'suites': all_suites},
   'certs': {'suites': all_suites},
   'ecc': {'suites': all_suites},
-  'edwards': {'suites': ['softhsm', 'kryoptic', 'kryoptic.nss']},
+  'edwards': {'suites': ['softhsm', 'kryoptic', 'kryoptic.nss', 'freehsm']},
   'ecdh': {'suites': all_suites},
   'democa': {'suites': all_suites, 'is_parallel': false},
   'digest': {'suites': all_suites},
   'fork': {'suites': all_suites},
-  'oaepsha2': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss']},
-  'hkdf': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss']},
-  'hkdfextract': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss']},
+  'oaepsha2': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss', 'freehsm']},
+  'hkdf': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss', 'freehsm']},
+  'hkdfextract': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss', 'freehsm']},
   'sshkdf': {'suites': all_suites},
-  'imported' : {'suites': ['softokn', 'kryoptic', 'kryoptic.nss']},
+  'imported' : {'suites': ['softokn', 'kryoptic', 'kryoptic.nss', 'freehsm']},
   'pem_encoder': {'suites': all_suites},
   'rsa': {'suites': all_suites},
   'rsaraw': {'suites': ['softokn']},
   'rsapss': {'suites': all_suites},
-  'rsapssam': {'suites': ['softhsm', 'kryoptic']},
+  'rsapssam': {'suites': ['softhsm', 'kryoptic', 'freehsm']},
   'genkey': {'suites': all_suites},
   'cachekeys': {'suites': all_suites},
   'pkey': {'suites': all_suites},
-  'pkey_provider': {'suites': ['kryoptic', 'kryoptic.nss', 'softokn']},
+  'pkey_provider': {'suites': ['kryoptic', 'kryoptic.nss', 'softokn', 'freehsm']},
   'session': {'suites': all_suites},
   'sigbuf': {'suites': ['softokn']},
-  'skey': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss'], 'timeout': 90},
+  'skey': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss', 'freehsm'], 'timeout': 90},
   'rand': {'suites': all_suites},
   'readkeys': {'suites': all_suites},
   'tls': {'suites': all_suites, 'is_parallel': false, 'timeout': 60},
   'tlsfuzzer': {'suites': all_suites, 'timeout': 90},
-  'uri': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss'], 'timeout': 90},
-  'ecxc': {'suites': ['softhsm', 'kryoptic', 'kryoptic.nss']},
-  'cms': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss']},
+  'uri': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss', 'freehsm'], 'timeout': 90},
+  'ecxc': {'suites': ['softhsm', 'kryoptic', 'kryoptic.nss', 'freehsm']},
+  'cms': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss', 'freehsm']},
   'pinlock': {'suites': ['kryoptic']},
-  'aead': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss']},
+  'aead': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss', 'freehsm']},
   'op_state': {'suites': all_suites},
   'defaultslot': {'suites': ['kryoptic.multislot']},
   'slotpin': {'suites': ['kryoptic.multislot']},
@@ -219,12 +219,30 @@ tests = {
   'signmsgecdsa': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss'] },
 }
 
+# Tests not run against FreeHSM yet, until the expected behaviour is
+# agreed with the FreeHSM maintainer
+freehsm_skip = [
+  # FreeHSM requires C_Login to create a secret or private key, even a
+  # public session object, and these tests import keys without a login
+  # (ECDH and HKDF derived secrets, AES keys, keys read from files)
+  'ecdh', 'imported', 'skey', 'aead',
+  # The TLS 1.3 key schedule runs HKDF on the token (same as above), so
+  # the handshakes fail with an internal error, and tlsfuzzer times out
+  'tls', 'tlsfuzzer',
+  # After the fork, refreshing a public key fails with
+  # CKR_USER_NOT_LOGGED_IN
+  'fork',
+]
+
 test_wrapper = find_program('test-wrapper')
 
 foreach t, extra_args : tests
   is_parallel = extra_args.get('is_parallel', true)
   timeout = extra_args.get('timeout', 30)
   foreach suite : extra_args.get('suites', [])
+    if suite == 'freehsm' and t in freehsm_skip
+      continue
+    endif
     test(
       t,
       test_wrapper,

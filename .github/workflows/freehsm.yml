@@ -1,0 +1,86 @@
+---
+name: FreeHSM
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    name: CI with FreeHSM token
+    runs-on: ubuntu-22.04
+    # FreeHSM needs OpenSSL 3.5 or newer and is not tested with OpenSSL 4 yet
+    container: quay.io/fedora/fedora:44
+    env:
+      # Has the module's own OpenSSL library context (freehsm#40), which
+      # no release includes yet
+      FREEHSM_COMMIT: 7e5941b5a140db77e93d24f5f03886f1980841ce
+    steps:
+      - name: Get Date for DNF cache entry
+        id: get-date
+        run: |
+          echo "date=$(/bin/date -u "+%Y%V")" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: DNF cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            /var/cache/libdnf5
+          key: ${{ runner.os }}-dnf-freehsm-${{ steps.get-date.outputs.date }}
+
+      - name: Install Dependencies
+        run: |
+            dnf -y install gcc git make meson expect pkgconf-pkg-config \
+              python3 openssl-devel openssl opensc p11-kit-devel \
+              python3-six which xxd
+
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Build FreeHSM
+        id: freehsm_setup
+        run: |
+          git init -q freehsm
+          cd freehsm
+          git fetch -q --depth 1 https://github.com/afchine1337/freehsm.git \
+              "${FREEHSM_COMMIT}"
+          git checkout -q FETCH_HEAD
+          # The all-mechanisms profile also dispatches the mechanisms NIST
+          # has not approved, which the tests use
+          make PROFILE=all-mechanisms generate
+          # GCC 16 warns about a set-but-unused variable in the KAT vectors
+          make PROFILE=all-mechanisms \
+              LOCAL_CFLAGS=-Wno-error=unused-but-set-variable libfreehsm.so
+          echo "FREEHSM=${PWD}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup
+        run: |
+          git config --global --add safe.directory \
+              /__w/pkcs11-provider/pkcs11-provider
+          git submodule update --init
+          meson setup builddir
+
+      - name: Build
+        run:
+          meson compile -C builddir
+
+      - name: Test
+        env:
+          FREEHSM: ${{ steps.freehsm_setup.outputs.FREEHSM }}
+        run:
+          meson test --num-processes 1 -C builddir --suite freehsm
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: Test logs FreeHSM
+          path: |
+            builddir/meson-logs/
+            builddir/tests/freehsm/p11prov-debug.log
+            builddir/tests/freehsm/testvars
+            builddir/tests/freehsm/openssl.cnf
+            builddir/tests/freehsm/tokens/audit.log
+            builddir/tests/*.log

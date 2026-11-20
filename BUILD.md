@@ -11,6 +11,7 @@ This package requires the following:
 - pkg-config
 - p11-kit, p11-kit-devel, opensc and softhsm (for testing)
 - Kryoptic softoken (for testing)
+- FreeHSM (for testing, optional, set `FREEHSM` to its build directory)
 
 ### Build
 
