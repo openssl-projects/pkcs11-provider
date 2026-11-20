@@ -122,6 +122,7 @@ test_programs = {
   'thkdfextract': ['thkdfextract.c', 'util.c'],
   'loadprov': ['loadprov.c', 'util.c'],
   'trsaraw': ['trsaraw.c', 'util.c'],
+  'tsignmsg': ['tsignmsg.c', 'util.c'],
 }
 
 test_executables = []
@@ -214,6 +215,8 @@ tests = {
   'op_state': {'suites': all_suites},
   'defaultslot': {'suites': ['kryoptic.multislot']},
   'slotpin': {'suites': ['kryoptic.multislot']},
+  'signmsgrsa': {'suites': all_suites},
+  'signmsgecdsa': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss'] },
 }
 
 test_wrapper = find_program('test-wrapper')

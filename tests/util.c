@@ -332,6 +332,26 @@ unsigned char *util_read_test_file(const char *filename, size_t *size)
     return util_read_file(path, size);
 }
 
+size_t util_write_file(const char *path, size_t datalen,
+                       const unsigned char *data)
+{
+    FILE *f;
+
+    f = fopen(path, "wb");
+    if (!f) {
+        PRINTERR("Failed to open %s\n", path);
+        return 0;
+    }
+    if (fwrite(data, 1, datalen, f) != datalen) {
+        PRINTERR("Failed to write data to %s\n", path);
+        fclose(f);
+        return 0;
+    }
+    fclose(f);
+
+    return datalen;
+}
+
 OSSL_LIB_CTX *util_load_default_libctx(OSSL_PROVIDER **prov)
 {
     OSSL_LIB_CTX *libctx = OSSL_LIB_CTX_new();
