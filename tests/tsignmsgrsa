@@ -1,0 +1,39 @@
+#!/bin/bash -e
+# Copyright 2026
+# SPDX-License-Identifier: Apache-2.0
+
+source "${TESTSSRCDIR}/helpers.sh"
+
+OSSLMAJ=$(get_openssl_major)
+OSSLMIN=$(get_openssl_minor)
+if [[ ${OSSLMAJ} -lt 3 || ( ${OSSLMAJ} -eq 3 && ${OSSLMIN} -lt 4 ) ]] ; then
+    title "The sign_message interface is not yet supported in the present openssl version ${OSSLMAJ}.${OSSLMIN} -- skipping"
+    exit 77;
+fi
+
+RSAALGORITHMS=(
+    RSA-SHA256
+    RSA-SHA384
+    RSA-SHA512
+)
+
+if [ ! -e "${TMPPDIR}/1kBrandom.bin" ] ; then
+    title PARA "Preparing testdata for sign message support tests"
+    dd if=/dev/urandom of="${TMPPDIR}/1kBrandom.bin" bs=1 count=1024 >/dev/null 2>&1
+fi
+
+title PARA "Test RSA sign message support"
+for alg in "${RSAALGORITHMS[@]}"; do
+   title PARA "Run RSA sign message test with $alg"
+   $CHECKER "${TESTBLDDIR}/tsignmsg" "${PRIURI}" "${alg}" "${TMPPDIR}/1kBrandom.bin" "${TMPPDIR}/1kBrandom-${alg}-sig.bin"
+   # shellcheck disable=SC2034  # shellcheck does not find usage, presumably because of the indirect use in ''
+   digest=${alg#RSA-}
+   ossl '
+pkeyutl -verify -inkey "${BASEURI}" -pubin
+                -digest ${digest}
+                -in "${TMPPDIR}/1kBrandom.bin"
+                -rawin
+                -sigfile ${TMPPDIR}/1kBrandom-${alg}-sig.bin'
+done
+
+echo "PASSED"
