@@ -624,6 +624,12 @@ int main(int argc, char *argv[])
 
 /* these are not defined in OpenSSL 3.0 so just skip the test */
 #ifdef OSSL_SIGNATURE_PARAM_CONTEXT_STRING
+            const char *support_params = getenv("SUPPORT_EDDSA_PARAMS");
+            if (support_params != NULL && strcmp(support_params, "0") == 0) {
+                free(label);
+                free(uri);
+                continue;
+            }
             /* Test again with context string */
             params[0] = OSSL_PARAM_construct_octet_string(
                 OSSL_SIGNATURE_PARAM_CONTEXT_STRING, (void *)context,
