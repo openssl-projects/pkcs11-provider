@@ -644,7 +644,7 @@ if [ "${SUPPORT_ALLOWED_MECHANISMS}" -eq 1 ]; then
     TSTCRTN="testRsaPss2Cert"
     MECHS="SHA256-RSA-PKCS-PSS"
 
-    ptool --keypairgen --key-type="RSA:3092" --id="$KEYID" \
+    ptool --keypairgen --key-type="RSA:3072" --id="$KEYID" \
           --label="${TSTCRTN}" --allowed-mechanisms "$MECHS" 2>&1
     ca_sign "${TSTCRTN}" "My RsaPss2 Cert" "$KEYID" "PSS-SHA256"
 
