@@ -9,6 +9,12 @@ if [[ "$NSS_FIPS" = "1" ]] && [[ "$TOKENTYPE" = "softokn" ]]; then
     exit 77;
 fi
 
+# CMS uses ECDH with the ANSI X9.63 KDF (RFC 5753)
+if [[ "${SUPPORT_ECDH_X963_KDF}" = "0" ]]; then
+    title "ECDH with the X9.63 KDF is not supported by the token -- skipping"
+    exit 77;
+fi
+
 MESSAGEFILE=${TMPPDIR}/cms-message.txt
 echo "CMS Test Message" > "${MESSAGEFILE}"
 
