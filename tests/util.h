@@ -32,6 +32,8 @@ EVP_PKEY *util_gen_key_ex(OSSL_LIB_CTX *libctx, const char *type,
 EVP_PKEY *util_gen_key(const char *type, const char *label);
 unsigned char *util_read_file(const char *path, size_t *size);
 unsigned char *util_read_test_file(const char *filename, size_t *size);
+size_t util_write_file(const char *path, size_t datalen,
+                       const unsigned char *data);
 OSSL_LIB_CTX *util_load_default_libctx(OSSL_PROVIDER **prov);
 #if defined(HAVE_OSSL_PROVIDER_LOAD_EX)
 #define CAN_LOAD_PKCS11_PROVIDER 1
