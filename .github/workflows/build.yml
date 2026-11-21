@@ -226,23 +226,23 @@ jobs:
             builddir/tests/*.log
             builddir/tests/${{ matrix.token }}/p11prov-debug.log
 
-      #- name: Run tests in FIPS Mode (on CentOS + gcc only)
-      #  if : ( steps.skip-check.outputs.skiptest != 'true' )
-      #  run: |
-      #      if [ "${{ matrix.compiler }}" = "gcc" -a \( "${{ matrix.name }}" = "centos9" -o "${{ matrix.name }}" = "centos10" \) ]; then
-      #        PKCS11_PROVIDER_FORCE_FIPS_MODE=1 \
-      #        meson test --num-processes 1 -C builddir
-      #      fi
+      - name: Run tests in FIPS Mode (on CentOS + gcc only)
+        if : ( steps.skip-check.outputs.skiptest != 'true' )
+        run: |
+            if [ "${{ matrix.compiler }}" = "gcc" -a \( "${{ matrix.name }}" = "centos9" -o "${{ matrix.name }}" = "centos10" \) ]; then
+              PKCS11_PROVIDER_FORCE_FIPS_MODE=1 \
+              meson test --num-processes 1 -C builddir
+            fi
 
-      #- uses: actions/upload-artifact@v7
-      #  if: failure()
-      #  with:
-      #    name: Test FIPS Mode logs ${{ matrix.name }}, ${{ matrix.compiler }}, ${{ matrix.token }}
-      #    path: |
-      #      builddir/meson-logs/
-      #      builddir/tests/${{ matrix.token }}/p11prov-debug.log
-      #      builddir/tests/${{ matrix.token }}/testvars
-      #      builddir/tests/${{ matrix.token }}/openssl.cnf
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: Test FIPS Mode logs ${{ matrix.name }}, ${{ matrix.compiler }}, ${{ matrix.token }}
+          path: |
+            builddir/meson-logs/
+            builddir/tests/${{ matrix.token }}/p11prov-debug.log
+            builddir/tests/${{ matrix.token }}/testvars
+            builddir/tests/${{ matrix.token }}/openssl.cnf
 
 
   build-macos:
