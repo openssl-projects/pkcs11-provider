@@ -759,10 +759,18 @@ static CK_RV tlsunpad(struct p11prov_cipher_ctx *cctx, unsigned char *out,
     CK_RV rv = CKR_GENERAL_ERROR;
     CK_ULONG overhead = cctx->tlsmacsize + 1; /* mac size + padlen byte */
     CK_ULONG maxcheck = MAX_PADDING;
-    CK_ULONG padsize = out[inlen - 1];
+    CK_ULONG padsize;
     CK_ULONG olen = inlen;
     CK_ULONG pass;
     CK_ULONG i, j;
+
+    /* inlen is public, so it can be checked normally: a record must hold
+     * at least one block, plus the explicit IV for TLS 1.1 and 1.2 */
+    if (inlen < AESBLOCK
+        || (cctx->tlsver != TLS1_VERSION && inlen < 2 * AESBLOCK)) {
+        return CKR_BUFFER_TOO_SMALL;
+    }
+    padsize = out[inlen - 1];
 
     /* Remove explicit IV for TLS 1.1 and 1.2 */
     if (cctx->tlsver != TLS1_VERSION) {
