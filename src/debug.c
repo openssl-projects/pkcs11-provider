@@ -28,14 +28,19 @@ void p11prov_debug_init(void)
         do {
             next = strchr(env, ',');
             if (strncmp(env, "file:", 5) == 0) {
-                int len;
-                if (stddebug != NULL && stddebug != stderr) {
-                    fclose(stddebug);
-                }
+                size_t len;
                 if (next) {
                     len = next - env - 5;
                 } else {
                     len = strlen(env + 5);
+                }
+                if (len >= sizeof(fname)) {
+                    /* path too long for fname, treat it like a file
+                     * that cannot be opened */
+                    goto done;
+                }
+                if (stddebug != NULL && stddebug != stderr) {
+                    fclose(stddebug);
                 }
                 memcpy(fname, env + 5, len);
                 fname[len] = '\0';
