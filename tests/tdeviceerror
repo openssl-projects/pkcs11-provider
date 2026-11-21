@@ -1,0 +1,15 @@
+#!/bin/bash -e
+# Copyright (C) 2026 Jakub Zelenka <jakub.openssl@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+source "${TESTSSRCDIR}/helpers.sh"
+
+title PARA "Re-init after device error"
+sed "s/pkcs11-module-quirks = /pkcs11-module-quirks = reinit-on-device-error /" \
+    "${OPENSSL_CONF}" > "${OPENSSL_CONF}.deverror"
+OPENSSL_CONF=${OPENSSL_CONF}.deverror
+
+export P11SHIM_MODULE="${P11LIB}"
+export PKCS11_PROVIDER_MODULE="${P11SHIM}"
+
+$CHECKER "${TESTBLDDIR}/tdeverror"
