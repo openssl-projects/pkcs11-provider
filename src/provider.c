@@ -51,6 +51,7 @@ struct p11prov_ctx {
     bool no_deinit;
     bool no_allowed_mechanisms;
     bool no_session_callbacks;
+    bool reinit_on_device_error;
     CK_USER_TYPE user_type;
     uint64_t blocked_calls;
     bool blocked_ops[OSSL_OP__HIGHEST + 1];
@@ -577,6 +578,24 @@ CK_RV p11prov_ctx_status(P11PROV_CTX *ctx)
             return ret;
         }
         break;
+    case P11PROV_NEEDS_RESET:
+        ret = INIT_LOCK_LOCK(ctx);
+        if (ret != CKR_OK) {
+            return ret;
+        }
+        /* LOCKED SECTION ------------- */
+        if (ctx->status == P11PROV_NEEDS_RESET) {
+            p11prov_slot_reset(ctx->slots);
+            p11prov_module_mark_reinit(ctx->module);
+        }
+        ret = p11prov_module_reinit(ctx);
+        (void)INIT_LOCK_UNLOCK(ctx);
+        /* ------------- LOCKED SECTION */
+        if (ret != CKR_OK) {
+            P11PROV_raise(ctx, ret, "Module re-initialization failed!");
+            return ret;
+        }
+        break;
     case P11PROV_IN_ERROR:
         P11PROV_raise(ctx, CKR_GENERAL_ERROR, "Module in error state!");
         ret = CKR_GENERAL_ERROR;
@@ -586,6 +605,22 @@ CK_RV p11prov_ctx_status(P11PROV_CTX *ctx)
     }
 
     return ret;
+}
+
+bool p11prov_ctx_needs_reset(P11PROV_CTX *ctx)
+{
+    return ctx->status == P11PROV_NEEDS_RESET;
+}
+
+void p11prov_ctx_check_device_error(P11PROV_CTX *ctx, CK_RV rv)
+{
+    if (rv != CKR_DEVICE_ERROR || !ctx->reinit_on_device_error) {
+        return;
+    }
+    if (ctx->status == P11PROV_INITIALIZED) {
+        P11PROV_debug("Device error, module marked for re-init");
+        ctx->status = P11PROV_NEEDS_RESET;
+    }
 }
 
 CK_UTF8CHAR_PTR p11prov_ctx_pin(P11PROV_CTX *ctx)
@@ -725,6 +760,11 @@ bool p11prov_ctx_is_call_blocked(P11PROV_CTX *ctx, uint64_t mask)
 bool p11prov_ctx_no_session_callbacks(P11PROV_CTX *ctx)
 {
     return ctx->no_session_callbacks;
+}
+
+bool p11prov_ctx_reinit_on_device_error(P11PROV_CTX *ctx)
+{
+    return ctx->reinit_on_device_error;
 }
 
 CK_INFO p11prov_ctx_get_ck_info(P11PROV_CTX *ctx)
@@ -1527,6 +1567,9 @@ int OSSL_provider_init(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in,
                        == 0) {
                 show_quirks = true;
                 ctx->user_type = CKU_LUNA_CU;
+            } else if (strncmp(str, "reinit-on-device-error", toklen) == 0) {
+                show_quirks = true;
+                ctx->reinit_on_device_error = true;
             }
             len -= toklen;
             if (sep) {
@@ -1547,6 +1590,9 @@ int OSSL_provider_init(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in,
         }
         if (ctx->no_session_callbacks) {
             P11PROV_debug(" No session callbacks");
+        }
+        if (ctx->reinit_on_device_error) {
+            P11PROV_debug(" Re-init on device error");
         }
         if (ctx->user_type != CKU_USER) {
             P11PROV_debug(" Vendor user type: [%08lx]", ctx->user_type);

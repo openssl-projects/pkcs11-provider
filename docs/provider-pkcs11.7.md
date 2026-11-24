@@ -226,6 +226,12 @@ Some implementatations of PKCS11 don't support `CKA_ALLOWED_MECHANISMS`
 attribute on keys. Setting this quirk prevents the provider from
 attempting to set and read this attribute.
 
+### reinit-on-device-error
+Re-initializes the module after a call returns `CKR_DEVICE_ERROR`, for
+example because the connection to a remote token was lost. All sessions
+are re-opened and token keys are searched again on their next use. The
+operation that hits the error still fails and session objects are lost.
+
 Default: none
 
 Example:
