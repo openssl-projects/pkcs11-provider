@@ -558,12 +558,6 @@ static CK_RV token_login(P11PROV_SESSION *session, P11PROV_URI *uri,
         if (!pin && cached_pin) {
             pin = (CK_UTF8CHAR_PTR)cached_pin;
         }
-        if (pin && bad_pin && strcmp((char *)pin, bad_pin) == 0) {
-            P11PROV_raise(session->provctx, CKR_PIN_INVALID,
-                          "Blocking stored PIN that failed a previous login"
-                          " to avoid blocking the token");
-            pin = NULL;
-        }
         if (pin) {
             pinlen = strlen((const char *)pin);
         } else {
@@ -609,6 +603,14 @@ static CK_RV token_login(P11PROV_SESSION *session, P11PROV_URI *uri,
             pinlen = cb_pin_len;
 
             cache = p11prov_ctx_cache_pins(session->provctx);
+
+            if (pin && bad_pin && strcmp((char *)pin, bad_pin) == 0) {
+                P11PROV_raise(session->provctx, CKR_PIN_INCORRECT,
+                              "Stored PIN from previous login is incorrect. "
+                              "Cancel here to avoid blocking the token.");
+                ret = CKR_PIN_INCORRECT;
+                goto done;
+            }
         }
     }
 
