@@ -18,3 +18,52 @@ if grep -q "Error 160 returned by C_Login" "${DBGFILE}"; then
     echo "A login with a wrong PIN was attempted"
     exit 1
 fi
+
+title PARA "Do not try a URI PIN on every token the URI matches"
+# PRIURI2 names no token and both tokens require a login, so the PIN must
+# not be tried on either of them (it is wrong for the default token)
+DBGFILE="${TMPPDIR}/slotpin-multi-debug.log"
+rm -f "${DBGFILE}"
+FAIL=0
+ORIG_DEBUG="${PKCS11_PROVIDER_DEBUG}"
+export PKCS11_PROVIDER_DEBUG="file:${DBGFILE}"
+ossl '
+pkeyutl -sign -inkey "${PRIURI2}?pin-value=${PIN2VALUE}"
+              -digest sha256 -rawin -in ${RAND64FILE}
+              -out ${TMPPDIR}/slotpin-multi.sig' || FAIL=1
+export PKCS11_PROVIDER_DEBUG="${ORIG_DEBUG}"
+if [ $FAIL -eq 0 ]; then
+    echo "Signing should fail when the URI matches two tokens"
+    exit 1
+fi
+if grep -q "Calling C_Login" "${DBGFILE}"; then
+    echo "A login was attempted although the URI matches two tokens"
+    exit 1
+fi
+
+title LINE "The same key loads with the token named in the URI"
+ossl '
+pkeyutl -sign -inkey "${PRIURI2WITHPINVALUE}"
+              -digest sha256 -rawin -in ${RAND64FILE}
+              -out ${TMPPDIR}/slotpin-single.sig'
+
+title PARA "Do not try a PIN rejected by the first token on the next one"
+# Key generation uses the first token the URI matches; the PIN is the
+# second token's, so the generation must fail instead of moving on
+DBGFILE="${TMPPDIR}/slotpin-genkey-debug.log"
+rm -f "${DBGFILE}"
+FAIL=0
+export PKCS11_PROVIDER_DEBUG="file:${DBGFILE}"
+ossl '
+genpkey -propquery "?provider=pkcs11" -algorithm EC
+        -pkeyopt ec_paramgen_curve:P-256
+        -pkeyopt "pkcs11_uri:pkcs11:object=slotpinGen;id=%03%01?pin-value=${PIN2VALUE}"' || FAIL=1
+export PKCS11_PROVIDER_DEBUG="${ORIG_DEBUG}"
+if [ $FAIL -eq 0 ]; then
+    echo "Key generation should fail with the other token's PIN"
+    exit 1
+fi
+if [ "$(grep -c "Calling C_Login" "${DBGFILE}")" -ne 1 ]; then
+    echo "The PIN was tried on more than one token"
+    exit 1
+fi
