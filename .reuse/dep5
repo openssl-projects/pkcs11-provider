@@ -35,7 +35,7 @@ Files: *.md
        tests/cert.json.rsapss.in
        tests/explicit_ec.*
        tests/fork-data.*
-       tests/lsan.supp
+       tests/lsan.supp.in
        tests/meson.build
        tests/openssl.cnf.in
        tests/README
