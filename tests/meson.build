@@ -83,9 +83,21 @@ if get_option('b_sanitize') == 'address'
     checker = 'env @0@=@1@'.format(preload_env_var, fake_dlclose.full_path())
   endif
 
+  lsan_supp_conf = configuration_data()
+  crypto_version = libcrypto.version()
+  if crypto_version.version_compare('<= 4.0.3') or crypto_version.version_compare('== 4.1.0')
+    lsan_supp_conf.set('EXTRA_LEAK_SUPPRESSIONS', 'leak:skeymgmt_from_algorithm')
+  else
+    lsan_supp_conf.set('EXTRA_LEAK_SUPPRESSIONS', '')
+  endif
+  lsan_supp = configure_file(
+    input: 'lsan.supp.in',
+    output: 'lsan.supp',
+    configuration: lsan_supp_conf,
+  )
   add_env = {
     'ASAN_OPTIONS': 'fast_unwind_on_malloc=0:detect_leaks=1',
-    'LSAN_OPTIONS': 'suppressions=@0@/lsan.supp'.format(meson.current_source_dir()),
+    'LSAN_OPTIONS': 'suppressions=@0@'.format(lsan_supp.full_path()),
     'CHECKER': checker,
   }
 
