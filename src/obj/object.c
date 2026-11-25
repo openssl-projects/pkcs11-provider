@@ -150,8 +150,11 @@ static void cache_key(P11PROV_OBJ *obj)
         goto done;
     }
 
-    /* If already cached, release and re-cache */
-    destroy_key_cache(obj, session);
+    /* another thread may have cached the key in the meantime */
+    if (obj->cached != CK_INVALID_HANDLE) {
+        p11prov_return_session(session);
+        goto done;
+    }
 
     sess = p11prov_session_handle(session);
     ret = p11prov_CopyObject(obj->ctx, sess, handle, template,
