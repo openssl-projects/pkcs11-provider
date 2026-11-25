@@ -123,6 +123,7 @@ test_programs = {
   'loadprov': ['loadprov.c', 'util.c'],
   'trsaraw': ['trsaraw.c', 'util.c'],
   'tsignmsg': ['tsignmsg.c', 'util.c'],
+  'tthreads': ['tthreads.c', 'util.c'],
 }
 
 test_executables = []
@@ -130,7 +131,7 @@ foreach t, sources : test_programs
   t = executable(t, sources,
                  build_by_default: false,
                  include_directories: [configinc],
-                 dependencies: [libcrypto, libssl])
+                 dependencies: [libcrypto, libssl, pthread_dep])
   test_executables += [t]
 endforeach
 
@@ -186,6 +187,7 @@ tests = {
   'democa': {'suites': all_suites, 'is_parallel': false},
   'digest': {'suites': all_suites},
   'fork': {'suites': all_suites},
+  'threads': {'suites': ['kryoptic']},
   'oaepsha2': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss']},
   'hkdf': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss']},
   'hkdfextract': {'suites': ['softokn', 'kryoptic', 'kryoptic.nss']},
