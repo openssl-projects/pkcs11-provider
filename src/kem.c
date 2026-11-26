@@ -214,6 +214,8 @@ static int p11prov_mlkem_encapsulate(void *vctx, unsigned char *ct,
     CK_ATTRIBUTE key_template[] = {
         { CKA_CLASS, &key_class, sizeof(key_class) },
         { CKA_KEY_TYPE, &key_type, sizeof(key_type) },
+        /* public, so that it can be created without a login */
+        { CKA_PRIVATE, &val_false, sizeof(val_false) },
         { CKA_SENSITIVE, &val_false, sizeof(val_false) },
         { CKA_EXTRACTABLE, &val_true, sizeof(val_true) },
         { CKA_TOKEN, &val_false, sizeof(val_false) },
@@ -315,6 +317,8 @@ static int p11prov_mlkem_decapsulate(void *vctx, unsigned char *ss,
     CK_ATTRIBUTE key_template[] = {
         { CKA_CLASS, &key_class, sizeof(key_class) },
         { CKA_KEY_TYPE, &key_type, sizeof(key_type) },
+        /* public, so that it can be created without a login */
+        { CKA_PRIVATE, &val_false, sizeof(val_false) },
         { CKA_SENSITIVE, &val_false, sizeof(val_false) },
         { CKA_EXTRACTABLE, &val_true, sizeof(val_true) },
         { CKA_TOKEN, &val_false, sizeof(val_false) },

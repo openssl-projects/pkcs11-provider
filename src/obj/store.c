@@ -247,13 +247,40 @@ done:
 }
 
 static CK_RV store_key(P11PROV_OBJ *key, P11PROV_SESSION *in_session,
-                       CK_ATTRIBUTE *tmpl, int tmpl_cnt)
+                       CK_ATTRIBUTE *in_tmpl, int in_tmpl_cnt)
 {
     P11PROV_SLOTS_CTX *slots = NULL;
     CK_SLOT_ID slot = CK_UNAVAILABLE_INFORMATION;
     P11PROV_SESSION *session = in_session;
     CK_SESSION_HANDLE sess = CK_INVALID_HANDLE;
+    CK_BBOOL val_false = CK_FALSE;
+    CK_BBOOL val_token = CK_FALSE;
+    bool has_private = false;
+    CK_ATTRIBUTE *tmpl = in_tmpl;
+    int tmpl_cnt = in_tmpl_cnt;
     CK_RV rv;
+
+    for (int i = 0; i < in_tmpl_cnt; i++) {
+        if (in_tmpl[i].type == CKA_TOKEN) {
+            val_token = *(CK_BBOOL *)in_tmpl[i].pValue;
+        } else if (in_tmpl[i].type == CKA_PRIVATE) {
+            has_private = true;
+        }
+    }
+
+    /* The application already holds the key material of what we import
+     * as a session object, so there is nothing to protect with a login.
+     * Make it a public object: the token default for keys is usually
+     * private, and only public objects can be created without a login. */
+    if (val_token == CK_FALSE && !has_private) {
+        tmpl = OPENSSL_malloc(sizeof(CK_ATTRIBUTE) * (in_tmpl_cnt + 1));
+        if (!tmpl) {
+            return CKR_HOST_MEMORY;
+        }
+        memcpy(tmpl, in_tmpl, sizeof(CK_ATTRIBUTE) * in_tmpl_cnt);
+        tmpl[tmpl_cnt++] =
+            (CK_ATTRIBUTE) { CKA_PRIVATE, &val_false, sizeof(val_false) };
+    }
 
     if (!in_session) {
         slots = p11prov_ctx_get_slots(key->ctx);
@@ -275,7 +302,6 @@ static CK_RV store_key(P11PROV_OBJ *key, P11PROV_SESSION *in_session,
         sess = p11prov_session_handle(session);
     } else {
         CK_SESSION_INFO session_info;
-        CK_BBOOL val_token = CK_FALSE;
 
         sess = p11prov_session_handle(session);
         rv = p11prov_GetSessionInfo(key->ctx, sess, &session_info);
@@ -283,13 +309,6 @@ static CK_RV store_key(P11PROV_OBJ *key, P11PROV_SESSION *in_session,
             goto done;
         }
         slot = session_info.slotID;
-
-        for (int i = 0; i < tmpl_cnt; i++) {
-            if (tmpl[i].type == CKA_TOKEN) {
-                val_token = *(CK_BBOOL *)tmpl[i].pValue;
-                break;
-            }
-        }
 
         if (((session_info.flags & CKF_RW_SESSION) == 0)
             && val_token == CK_TRUE) {
@@ -321,6 +340,9 @@ done:
     }
     if (in_session != session) {
         p11prov_return_session(session);
+    }
+    if (tmpl != in_tmpl) {
+        OPENSSL_free(tmpl);
     }
     return rv;
 }

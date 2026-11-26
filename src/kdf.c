@@ -234,9 +234,11 @@ static int inner_derive_key(P11PROV_CTX *ctx, P11PROV_OBJ *key,
     CK_BBOOL val_false = CK_FALSE;
     CK_BBOOL val_true = CK_TRUE;
     CK_ULONG key_size = keylen;
-    CK_ATTRIBUTE key_template[6] = {
+    CK_ATTRIBUTE key_template[7] = {
         { CKA_CLASS, &class, sizeof(class) },
         { CKA_TOKEN, &val_false, sizeof(val_false) },
+        /* public, so that it can be derived without a login */
+        { CKA_PRIVATE, &val_false, sizeof(val_false) },
         { CKA_VALUE_LEN, &key_size, sizeof(key_size) },
         { CKA_KEY_TYPE, &key_type, sizeof(key_type) },
         { CKA_SENSITIVE, &val_false, sizeof(val_false) },
@@ -247,10 +249,10 @@ static int inner_derive_key(P11PROV_CTX *ctx, P11PROV_OBJ *key,
 
     if (mechanism->mechanism == CKM_HKDF_DERIVE) {
         class = CKO_SECRET_KEY;
-        key_tmpl_len = 6;
+        key_tmpl_len = 7;
     } else if (mechanism->mechanism == CKM_HKDF_DATA) {
         class = CKO_DATA;
-        key_tmpl_len = 3;
+        key_tmpl_len = 4;
     } else {
         ret = CKR_ARGUMENTS_BAD;
         P11PROV_raise(ctx, ret, "Invalid mechanism type: %lu",

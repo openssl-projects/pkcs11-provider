@@ -236,9 +236,11 @@ static void *p11prov_ecdh_derive_skey(void *ctx, const char *key_type,
     CK_BBOOL val_true = CK_TRUE;
     CK_BBOOL val_false = CK_FALSE;
     CK_ULONG key_size = keylen;
-    CK_ATTRIBUTE key_template[6] = {
+    CK_ATTRIBUTE key_template[7] = {
         { CKA_CLASS, &key_class, sizeof(key_class) },
         { CKA_KEY_TYPE, &keytype, sizeof(keytype) },
+        /* public, so that it can be derived without a login */
+        { CKA_PRIVATE, &val_false, sizeof(val_false) },
         /* To be maximally compatible with OpenSSL not fully
          * EVP_SKEY aware, we create ephemeral keys as unconditionally
          * exractable for now, eventually we may change this to allow
