@@ -1017,6 +1017,32 @@ static bool needs_login(P11PROV_CTX *ctx, P11PROV_SLOT *slot,
     return false;
 }
 
+/* Counts the slots matching the URI that require a login */
+static int count_login_slots(P11PROV_CTX *provctx, P11PROV_SLOTS_CTX *slots,
+                             P11PROV_URI *uri, CK_MECHANISM_TYPE mechtype,
+                             bool rw)
+{
+    P11PROV_SLOT *slot;
+    int slot_idx = 0;
+    int count = 0;
+
+    for (slot = p11prov_fetch_slot(slots, &slot_idx); slot != NULL;
+         slot = p11prov_fetch_slot(slots, &slot_idx)) {
+        if (check_slot(provctx, slot, uri, mechtype, rw) != CKR_OK) {
+            continue;
+        }
+        /* Only count the tokens that require a login. With login-behavior
+         * always, needs_login() is true for every token, including ones
+         * like the NSS crypto services slot, which has no key database.
+         * CKF_USER_PIN_INITIALIZED does not tell them apart: NSS 3.134
+         * sets it on that slot. */
+        if (p11prov_slot_check_req_login(slot)) {
+            count++;
+        }
+    }
+    return count;
+}
+
 /* There are three possible ways to call this function.
  * 1. One shot call on a specific slot
  *      slotid must point to a specific slot number
@@ -1081,12 +1107,29 @@ CK_RV p11prov_get_session(P11PROV_CTX *provctx, CK_SLOT_ID *slotid,
             }
         }
     } else {
+        int login_slots = 0;
+
         P11PROV_debug("cycle through available slots");
         slot_idx = 0;
         ret = CKR_CANCEL;
 
         /* set error mark so we can clear spurious errors on success */
         p11prov_set_error_mark(provctx);
+
+        /* When iterating over all the tokens the URI matches (the store),
+         * a PIN given with the URI or in the configuration is meant for one
+         * of them. If several need a login, do not try it on all: a wrong
+         * PIN costs each token a retry, and every one of them sees the PIN.
+         * Like libp11, log in to none and only look at objects available
+         * without a login. */
+        if (next_slotid && uri && login != LOGIN_NOT_REQUIRED) {
+            login_slots = count_login_slots(provctx, slots, uri, mechtype, rw);
+            if (login_slots > 1) {
+                P11PROV_debug("URI matches %d tokens requiring login, "
+                              "not logging in",
+                              login_slots);
+            }
+        }
 
         /* caller is cycling through slots, find the next viable one */
         for (slot = p11prov_fetch_slot(slots, &slot_idx); slot != NULL;
@@ -1108,8 +1151,14 @@ CK_RV p11prov_get_session(P11PROV_CTX *provctx, CK_SLOT_ID *slotid,
                 /* keep going */
                 continue;
             }
-            if (needs_login(provctx, slot, login)) {
+            /* Log in unless multiple tokens require login (login_slots > 1) */
+            if (login_slots <= 1 && needs_login(provctx, slot, login)) {
                 ret = slot_login(slot, uri, pw_cb, pw_cbarg, login, NULL);
+                if (ret == CKR_PIN_INCORRECT || ret == CKR_PIN_LOCKED) {
+                    /* the token refused the PIN, do not try it on the
+                     * following ones */
+                    break;
+                }
                 if (ret != CKR_OK) {
                     /* keep going */
                     continue;
@@ -1128,6 +1177,23 @@ CK_RV p11prov_get_session(P11PROV_CTX *provctx, CK_SLOT_ID *slotid,
 
             /* if there was any error, remove it, as we got success */
             p11prov_pop_error_to_mark(provctx);
+
+            /* When multiple tokens require login, we cannot safely try the PIN
+             * on all of them. We proceed without login so that public objects
+             * (certificates, public keys) can still be found.
+             *
+             * We speculatively raise CKR_USER_NOT_LOGGED_IN once per search:
+             * - If public objects are found, store_fetch() pops and discards
+             *   this error mark.
+             * - If no objects are found (e.g. caller wanted a private key),
+             *   store_fetch() keeps the mark and this error explains why. */
+            if (login_slots > 1 && *slotid == CK_UNAVAILABLE_INFORMATION) {
+                P11PROV_raise(provctx, CKR_USER_NOT_LOGGED_IN,
+                              "The URI matches %d tokens that require a"
+                              " login, not logging in to any of them. Add"
+                              " the token or slot-id attribute to the URI",
+                              login_slots);
+            }
 
             *slotid = id;
             if (next_slotid) {
